@@ -29,7 +29,7 @@ loginForm.addEventListener('submit', (event) => {
       if (userFound) {
         resultDiv.innerHTML = `<p style="color: green;">Login successful! Welcome, ${userFound.username}.</p>`;
         setTimeout(() => {
-          window.location.href = 'dashboard.html'; // Replace with your target page
+          window.location.href = 'homepage.html'; // Replace with your target page
         }, 2000);
       } else {
         resultDiv.innerHTML = `<p style="color: red;">Invalid username or password.</p>`;
@@ -40,3 +40,4 @@ loginForm.addEventListener('submit', (event) => {
       resultDiv.innerHTML = `<p style="color: red;">An error occurred while fetching user data.</p>`;
     });
 });
+
