@@ -102,8 +102,8 @@ class ResumeAnalyzer {
                 this.analysis = analysisResult;
                 this.displayResults();
                 document.getElementById('results-section').classList.remove('hidden');
-                // Default to the enhanced resume tab
                 this.switchTab('enhanced');
+                this.initializeChatbot(); // Add this line
             }
         } catch (error) {
             console.error("Analysis failed:", error);
@@ -660,6 +660,92 @@ class ResumeAnalyzer {
         Packer.toBlob(doc).then(blob => {
             window.saveAs(blob, "enhanced-resume.docx");
         });
+    }
+
+    initializeChatbot() {
+        const chatbot = document.getElementById('chatbot');
+        const chatIcon = document.getElementById('chat-icon');
+        const chatWindow = document.getElementById('chat-window');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
+
+        // Show chatbot after analysis
+        chatbot.classList.remove('hidden');
+
+        // Toggle chat window
+        chatIcon.addEventListener('click', () => {
+            chatWindow.classList.toggle('hidden');
+            if (!chatWindow.classList.contains('hidden')) {
+                chatInput.focus();
+            }
+        });
+
+        // Handle chat form submission
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message to chat
+            this.addChatMessage(message, true);
+            chatInput.value = '';
+
+            // Create context-aware prompt
+            const prompt = `
+                You are an AI resume assistant. Use the following context to answer questions about the resume and job description.
+                Be concise and specific in your answers.
+
+                Resume:
+                ${this.resumeText}
+
+                Job Description:
+                ${this.jobDescription}
+
+                Analysis Results:
+                - ATS Score: ${this.analysis.atsScore}%
+                - Matched Keywords: ${this.analysis.matchedKeywords.join(', ')}
+                - Missing Keywords: ${this.analysis.missingKeywords.join(', ')}
+                - Skill Gaps: ${this.analysis.skillGaps.join(', ')}
+
+                User Question: ${message}
+            `;
+
+            try {
+                const payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.7,
+                    }
+                };
+
+                const response = await fetch(this.apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to get response');
+                }
+
+                const result = await response.json();
+                const answer = result.candidates[0].content.parts[0].text;
+                this.addChatMessage(answer, false);
+            } catch (error) {
+                console.error('Chat error:', error);
+                this.addChatMessage('Sorry, I encountered an error. Please try again.', false);
+            }
+        });
+    }
+
+    addChatMessage(message, isUser) {
+        const chatMessages = document.getElementById('chat-messages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+        messageDiv.textContent = message;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 }
 
