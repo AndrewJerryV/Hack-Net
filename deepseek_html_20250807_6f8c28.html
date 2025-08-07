@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Customization AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#4f46e5',
+                        'secondary': '#818cf8',
+                        'accent': '#f59e0b',
+                        'dark': '#1e293b',
+                        'light': '#f8fafc'
+                    },
+                    boxShadow: {
+                        'card': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                        'button': '0 4px 6px -1px rgba(79, 70, 229, 0.3), 0 2px 4px -2px rgba(79, 70, 229, 0.3)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            min-height: 100vh;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        .card:hover {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        .spinner {
+            border-top-color: #4f46e5;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .progress-fill {
+            transition: width 0.5s ease-in-out;
+        }
+        .score-excellent { color: #10B981; }
+        .progress-excellent { background-color: #10B981; }
+        .score-good { color: #F59E0B; }
+        .progress-good { background-color: #F59E0B; }
+        .score-poor { color: #EF4444; }
+        .progress-poor { background-color: #EF4444; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        /* Expandable panels */
+        .panel {
+            border-radius: 0.75rem;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        }
+        .panel-header {
+            padding: 1.25rem;
+            background-color: #f8fafc;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .panel-header:hover {
+            background-color: #f1f5f9;
+        }
+        .panel-header h3 {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .panel-content {
+            padding: 0 1.25rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+        }
+        .panel-content.open {
+            padding: 1.25rem;
+            max-height: 1000px;
+        }
+        .chevron {
+            transition: transform 0.3s ease;
+        }
+        .chevron.open {
+            transform: rotate(180deg);
+        }
+        
+        /* Keyword styling */
+        .keyword {
+            display: inline-block;
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin: 0.25rem;
+        }
+        .matched-keyword {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .missing-keyword {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* Skill gap styling */
+        .skill-gap {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background-color: #fffbeb;
+            color: #92400e;
+            margin: 0.25rem;
+            font-weight: 500;
+        }
+        
+        /* Suggestion styling */
+        .suggestion-item {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            background-color: #f0f9ff;
+            margin-bottom: 0.75rem;
+        }
+        .suggestion-item:last-child {
+            margin-bottom: 0;
+        }
+        .suggestion-icon {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 0.75rem;
+            background-color: #dbeafe;
+            color: #3b82f6;
+        }
+        
+        /* Enhanced resume styling */
+        .enhanced-resume {
+            background: linear-gradient(to bottom, #ffffff, #f8fafc);
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            height: 100%;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+        }
+        .resume-content {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            white-space: pre-wrap;
+        }
+        .resume-section {
+            margin-bottom: 1.5rem;
+        }
+        .resume-section-title {
+            font-weight: 700;
+            color: #4f46e5;
+            margin-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.25rem;
+        }
+        
+        /* Glow effect */
+        .glow {
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.2);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c7d2fe;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a5b4fc;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Resume Customization AI</h1>
+            <p class="text-lg text-gray-600 mt-3 max-w-2xl mx-auto">Optimize your resume for any job with AI-powered insights and tailored recommendations</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="mb-12">
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Resume Input -->
+                <div class="card p-6 glow transition-all duration-300 hover:glow">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center">
+                            <i class="fas fa-file-alt text-xl text-primary"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-xl font-semibold text-gray-900">Your Resume</h3>
+                            <p class="text-gray-500">Upload or paste your resume content</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="resume-upload" class="block text-sm font-medium text-gray-700 mb-2">Upload Resume (.txt)</label>
+                        <input type="file" id="resume-upload" accept=".txt" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-primary hover:file:bg-indigo-100 cursor-pointer transition">
+                        <div class="relative mt-4">
+                            <textarea id="resume-text" placeholder="Or paste your resume content here..." rows="12" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition shadow-sm"></textarea>
+                            <div class="absolute bottom-3 right-3 text-gray-400">
+                                <i class="fas fa-edit"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Description Input -->
+                <div class="card p-6 glow transition-all duration-300 hover:glow">
+                     <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
+                            <i class="fas fa-briefcase text-xl text-amber-500"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-xl font-semibold text-gray-900">Job Description</h3>
+                            <p class="text-gray-500">Paste the job description to target</p>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <textarea id="job-description" placeholder="Paste the job description here..." rows="15" class="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition shadow-sm"></textarea>
+                        <div class="absolute bottom-3 right-3 text-gray-400">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analyze Button -->
+            <div class="text-center mt-10">
+                <button id="analyze-btn" class="bg-gradient-to-r from-primary to-secondary text-white font-bold py-4 px-10 rounded-xl hover:from-primary/90 hover:to-secondary/90 transition-all transform hover:scale-[1.02] disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center mx-auto shadow-lg shadow-primary/30 hover:shadow-primary/40 disabled:shadow-none">
+                    <i class="fas fa-bolt mr-3"></i>
+                    <span class="text-lg">Analyze & Customize</span>
+                </button>
+                <div id="loading" class="hidden text-center mt-6">
+                    <div class="spinner w-10 h-10 border-4 border-gray-200 border-t-primary rounded-full inline-block"></div>
+                    <p class="mt-4 text-gray-600 font-medium">AI is analyzing your resume... this may take a moment.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden">
+            <!-- ATS Score and Export -->
+            <div class="grid md:grid-cols-3 gap-8 mb-10">
+                <div class="md:col-span-1 card p-6 flex flex-col justify-center items-center">
+                     <h3 class="text-xl font-semibold mb-4 text-center text-gray-800">ATS Compatibility Score</h3>
+                     <div class="relative w-44 h-44">
+                         <svg class="w-full h-full" viewBox="0 0 36 36">
+                            <path class="text-gray-200" stroke-width="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <path id="progress-ring" class="progress-poor" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                         </svg>
+                         <div id="ats-score" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl font-bold text-primary">0%</div>
+                     </div>
+                     <div id="score-label" class="mt-4 text-lg font-medium text-gray-700">Needs Improvement</div>
+                     <div class="mt-4 text-sm text-gray-500 max-w-xs text-center">Based on analysis of keywords, skills, and formatting</div>
+                </div>
+                 <div class="md:col-span-2 card p-6">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Analysis & Enhanced Resume</h3>
+                    <p id="score-message" class="text-gray-600 mb-6">Your resume analysis will appear here.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <button id="export-pdf-btn" class="w-full bg-red-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-red-600 transition flex items-center justify-center shadow-md"><i class="fas fa-file-pdf mr-2"></i>Export Analysis (PDF)</button>
+                        <button id="export-word-btn" class="w-full bg-blue-500 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-600 transition flex items-center justify-center shadow-md"><i class="fas fa-file-word mr-2"></i>Export Analysis (Word)</button>
+                        <button id="export-enhanced-pdf-btn" class="w-full bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-primary/90 hover:to-indigo-600/90 transition flex items-center justify-center shadow-md"><i class="fas fa-file-pdf mr-2"></i>Export Resume (PDF)</button>
+                        <button id="export-enhanced-word-btn" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-green-500/90 hover:to-emerald-600/90 transition flex items-center justify-center shadow-md"><i class="fas fa-file-word mr-2"></i>Export Resume (Word)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Results Area -->
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <!-- Left Panel - Expandable Sections -->
+                <div class="lg:col-span-1">
+                    <!-- Suggestions Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="text-lg font-semibold">
+                                <i class="fas fa-lightbulb text-amber-500"></i>
+                                Improvement Suggestions
+                            </h3>
+                            <i class="fas fa-chevron-down chevron text-gray-500"></i>
+                        </div>
+                        <div class="panel-content bg-white">
+                            <div id="suggestions-list" class="space-y-4"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Keywords Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="text-lg font-semibold">
+                                <i class="fas fa-key text-blue-500"></i>
+                                Keyword Analysis
+                            </h3>
+                            <i class="fas fa-chevron-down chevron text-gray-500"></i>
+                        </div>
+                        <div class="panel-content bg-white">
+                            <div class="mb-6">
+                                <h4 class="font-semibold text-green-600 mb-3 flex items-center">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    Matched Keywords
+                                </h4>
+                                <div id="matched-keywords" class="flex flex-wrap"></div>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-red-600 mb-3 flex items-center">
+                                    <i class="fas fa-times-circle mr-2"></i>
+                                    Missing Keywords
+                                </h4>
+                                <div id="missing-keywords" class="flex flex-wrap"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Skill Gaps Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3 class="text-lg font-semibold">
+                                <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                                Skill Gap Analysis
+                            </h3>
+                            <i class="fas fa-chevron-down chevron text-gray-500"></i>
+                        </div>
+                        <div class="panel-content bg-white">
+                            <p class="text-gray-600 mb-4">These skills are in the job description but not clearly identified in your resume.</p>
+                            <div id="skill-gaps" class="flex flex-wrap"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Panel - Enhanced Resume -->
+                <div class="lg:col-span-3">
+                    <div class="card h-full">
+                        <div class="p-6">
+                            <h3 class="text-2xl font-semibold mb-4 text-gray-800 flex items-center">
+                                <i class="fas fa-magic text-purple-500 mr-3"></i>
+                                AI-Enhanced Resume
+                            </h3>
+                            <p class="text-gray-600 mb-6">Here is an optimized version of your resume. Copy this content or export it directly.</p>
+                            
+                            <div class="enhanced-resume">
+                                <div id="enhanced-resume-content" class="resume-content"></div>
+                            </div>
+                            
+                            <div class="mt-6 flex justify-end">
+                                <button class="flex items-center text-primary font-medium hover:text-primary/80">
+                                    <i class="far fa-copy mr-2"></i>
+                                    Copy to Clipboard
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-circle text-red-500 text-3xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-3 text-gray-900">Analysis Failed</h3>
+            <p id="error-message" class="text-gray-600 mb-6"></p>
+            <button id="close-modal-btn" class="bg-gradient-to-r from-primary to-secondary text-white font-bold py-3 px-8 rounded-xl hover:from-primary/90 hover:to-secondary/90 transition">Close</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script>
+        // DOM Elements
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const resultsSection = document.getElementById('results-section');
+        const loadingIndicator = document.getElementById('loading');
+        const errorModal = document.getElementById('error-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const errorMessage = document.getElementById('error-message');
+        
+        // Panel elements
+        const panelHeaders = document.querySelectorAll('.panel-header');
+        const panelContents = document.querySelectorAll('.panel-content');
+        const chevrons = document.querySelectorAll('.chevron');
+        
+        // Initialize panels
+        panelHeaders.forEach((header, index) => {
+            header.addEventListener('click', () => {
+                const content = panelContents[index];
+                const chevron = chevrons[index];
+                
+                content.classList.toggle('open');
+                chevron.classList.toggle('open');
+            });
+        });
+        
+        // Close modal
+        closeModalBtn.addEventListener('click', () => {
+            errorModal.classList.add('hidden');
+        });
+        
+        // Analyze button functionality (demo)
+        analyzeBtn.addEventListener('click', () => {
+            // Show loading
+            loadingIndicator.classList.remove('hidden');
+            analyzeBtn.disabled = true;
+            
+            // Simulate AI processing
+            setTimeout(() => {
+                loadingIndicator.classList.add('hidden');
+                resultsSection.classList.remove('hidden');
+                
+                // Scroll to results
+                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Update ATS score
+                updateAtsScore(82);
+                
+                // Populate demo content
+                populateDemoContent();
+            }, 2500);
+        });
+        
+        // Update ATS score visualization
+        function updateAtsScore(score) {
+            const scoreElement = document.getElementById('ats-score');
+            const scoreLabel = document.getElementById('score-label');
+            const progressRing = document.getElementById('progress-ring');
+            
+            scoreElement.textContent = `${score}%`;
+            
+            // Calculate dasharray for circle
+            const circumference = 2 * Math.PI * 15.9155;
+            const dashoffset = circumference * (1 - score / 100);
+            
+            progressRing.style.strokeDasharray = `${circumference}`;
+            progressRing.style.strokeDashoffset = `${dashoffset}`;
+            
+            // Update color and label based on score
+            let ringColor = 'progress-poor';
+            let labelText = 'Needs Improvement';
+            let labelColor = 'text-red-600';
+            
+            if (score >= 80) {
+                ringColor = 'progress-excellent';
+                labelText = 'Excellent Match!';
+                labelColor = 'text-green-600';
+            } else if (score >= 60) {
+                ringColor = 'progress-good';
+                labelText = 'Good Match';
+                labelColor = 'text-amber-500';
+            }
+            
+            progressRing.className = ringColor;
+            scoreLabel.textContent = labelText;
+            scoreLabel.className = `mt-4 text-lg font-medium ${labelColor}`;
+            
+            // Update score message
+            document.getElementById('score-message').textContent = 
+                `Your resume has an ${score}% match with the job description. The AI has generated an optimized version with key improvements shown below.`;
+        }
+        
+        // Populate demo content
+        function populateDemoContent() {
+            // Suggestions
+            const suggestionsList = document.getElementById('suggestions-list');
+            suggestionsList.innerHTML = `
+                <div class="suggestion-item">
+                    <div class="suggestion-icon">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Add a Professional Summary</h4>
+                        <p class="text-gray-600 mt-1">Include a 3-4 sentence summary at the top highlighting your most relevant experience for this role.</p>
+                    </div>
+                </div>
+                <div class="suggestion-item">
+                    <div class="suggestion-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Quantify Achievements</h4>
+                        <p class="text-gray-600 mt-1">Add metrics to your accomplishments (e.g. "Increased sales by 25%" instead of "Increased sales").</p>
+                    </div>
+                </div>
+                <div class="suggestion-item">
+                    <div class="suggestion-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Include Missing Keywords</h4>
+                        <p class="text-gray-600 mt-1">Add these important keywords: Agile Methodology, Cloud Computing, UX Design.</p>
+                    </div>
+                </div>
+                <div class="suggestion-item">
+                    <div class="suggestion-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800">Highlight Technical Skills</h4>
+                        <p class="text-gray-600 mt-1">Create a dedicated skills section with both technical and soft skills relevant to the position.</p>
+                    </div>
+                </div>
+            `;
+            
+            // Keywords
+            const matchedKeywords = document.getElementById('matched-keywords');
+            matchedKeywords.innerHTML = `
+                <span class="keyword matched-keyword">Project Management</span>
+                <span class="keyword matched-keyword">JavaScript</span>
+                <span class="keyword matched-keyword">Team Leadership</span>
+                <span class="keyword matched-keyword">React</span>
+                <span class="keyword matched-keyword">Problem Solving</span>
+                <span class="keyword matched-keyword">API Development</span>
+                <span class="keyword matched-keyword">Communication</span>
+                <span class="keyword matched-keyword">Database Design</span>
+            `;
+            
+            const missingKeywords = document.getElementById('missing-keywords');
+            missingKeywords.innerHTML = `
+                <span class="keyword missing-keyword">Agile Methodology</span>
+                <span class="keyword missing-keyword">Cloud Computing</span>
+                <span class="keyword missing-keyword">UX Design</span>
+                <span class="keyword missing-keyword">DevOps</span>
+                <span class="keyword missing-keyword">CI/CD</span>
+                <span class="keyword missing-keyword">TypeScript</span>
+            `;
+            
+            // Skill Gaps
+            const skillGaps = document.getElementById('skill-gaps');
+            skillGaps.innerHTML = `
+                <span class="skill-gap"><i class="fas fa-code mr-2"></i>DevOps</span>
+                <span class="skill-gap"><i class="fas fa-cloud mr-2"></i>AWS</span>
+                <span class="skill-gap"><i class="fas fa-mobile-alt mr-2"></i>Mobile Development</span>
+                <span class="skill-gap"><i class="fas fa-shield-alt mr-2"></i>Cybersecurity</span>
+                <span class="skill-gap"><i class="fas fa-chart-pie mr-2"></i>Data Visualization</span>
+            `;
+            
+            // Enhanced Resume
+            const enhancedResume = document.getElementById('enhanced-resume-content');
+            enhancedResume.innerHTML = `
+JANE DOE
+San Francisco, CA • jane.doe@email.com • (555) 123-4567 • linkedin.com/in/janedoe
+
+PROFESSIONAL SUMMARY
+Full-stack developer with 5+ years of experience building scalable web applications. Expertise in JavaScript, React, Node.js, and modern cloud platforms. Proven track record of leading development teams to deliver projects 20% faster while improving code quality. Passionate about creating intuitive user experiences with robust backend systems.
+
+TECHNICAL SKILLS
+• Languages: JavaScript (ES6+), TypeScript, Python, HTML5, CSS3
+• Frameworks: React, Angular, Node.js, Express, Django
+• Databases: MongoDB, PostgreSQL, MySQL
+• Tools: Git, Docker, AWS, Jenkins, Webpack
+• Methodologies: Agile, Scrum, CI/CD, TDD
+
+PROFESSIONAL EXPERIENCE
+
+Senior Full-Stack Developer | Tech Innovations Inc. | Jan 2020 - Present
+• Led development of customer portal using React and Node.js, reducing page load time by 40%
+• Implemented CI/CD pipeline with Jenkins, decreasing deployment time from 4 hours to 15 minutes
+• Mentored 5 junior developers through code reviews and pair programming sessions
+• Collaborated with UX team to redesign checkout flow, increasing conversion by 22%
+
+Web Developer | Digital Solutions LLC | Mar 2017 - Dec 2019
+• Developed responsive e-commerce platform serving 50,000+ monthly users
+• Integrated payment processing system handling $2M+ in monthly transactions
+• Optimized database queries, improving API response times by 65%
+• Created comprehensive test suite covering 95% of critical business logic
+
+EDUCATION
+B.S. Computer Science | University of California | 2013 - 2017
+• GPA: 3.8/4.0
+• Dean's List: 6 semesters
+• Senior Project: AI-powered recommendation engine for e-commerce
+
+CERTIFICATIONS
+• AWS Certified Solutions Architect
+• Google Cloud Professional Developer
+            `;
+        }
+        
+        // Enable analyze button when both inputs have content
+        const resumeText = document.getElementById('resume-text');
+        const jobDescription = document.getElementById('job-description');
+        
+        function checkInputs() {
+            if (resumeText.value.trim() !== '' && jobDescription.value.trim() !== '') {
+                analyzeBtn.disabled = false;
+            } else {
+                analyzeBtn.disabled = true;
+            }
+        }
+        
+        resumeText.addEventListener('input', checkInputs);
+        jobDescription.addEventListener('input', checkInputs);
+        
+        // Initialize
+        checkInputs();
+    </script>
+</body>
+</html>

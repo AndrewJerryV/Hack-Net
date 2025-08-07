@@ -421,39 +421,67 @@ class ResumeAnalyzer {
 
     exportAnalysisToWord() {
         if (!this.analysis) return;
-        const { Document, Packer, Paragraph, TextRun, HeadingLevel } = docx;
+        
+        // Get docx from window object since we're using CDN
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel } = window.docx;
 
         const createSection = (title, items, isList = true) => {
-            const children = [new Paragraph({
-                text: title,
-                heading: HeadingLevel.HEADING_2,
-                spacing: { before: 200, after: 100 },
-            })];
+            const children = [
+                new Paragraph({
+                    text: title,
+                    heading: HeadingLevel.HEADING_2,
+                    spacing: { before: 400, after: 200 },
+                })
+            ];
+
             if (isList) {
                 items.forEach(item => {
-                    children.push(new Paragraph({ text: item, bullet: { level: 0 } }));
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun("• "),
+                                new TextRun(item)
+                            ],
+                            spacing: { before: 100, after: 100 }
+                        })
+                    );
                 });
             } else {
-                 children.push(new Paragraph(items.join(', ')));
+                children.push(
+                    new Paragraph({
+                        text: items.join(', '),
+                        spacing: { before: 100, after: 100 }
+                    })
+                );
             }
             return children;
         };
-        
+
         const doc = new Document({
             sections: [{
+                properties: {},
                 children: [
-                    new Paragraph({ text: 'Resume Analysis Report', heading: HeadingLevel.TITLE }),
-                    new Paragraph({ text: `ATS Score: ${this.analysis.atsScore}%`, heading: HeadingLevel.HEADING_1 }),
-                    ...createSection('Matched Keywords', this.analysis.matchedKeywords, false),
-                    ...createSection('Missing Keywords', this.analysis.missingKeywords, false),
-                    ...createSection('Skill Gaps', this.analysis.skillGaps),
-                    ...createSection('Improvement Suggestions', this.analysis.suggestions),
-                ],
-            }],
+                    new Paragraph({
+                        text: "Resume Analysis Report",
+                        heading: HeadingLevel.TITLE,
+                        spacing: { before: 200, after: 200 }
+                    }),
+                    new Paragraph({
+                        text: `ATS Score: ${this.analysis.atsScore}%`,
+                        heading: HeadingLevel.HEADING_1,
+                        spacing: { before: 200, after: 200 }
+                    }),
+                    ...createSection("Matched Keywords", this.analysis.matchedKeywords, false),
+                    ...createSection("Missing Keywords", this.analysis.missingKeywords, false),
+                    ...createSection("Skill Gaps", this.analysis.skillGaps),
+                    ...createSection("Improvement Suggestions", this.analysis.suggestions)
+                ]
+            }]
         });
 
+        // Generate and save document
         Packer.toBlob(doc).then(blob => {
-            saveAs(blob, 'resume-analysis-report.docx');
+            window.saveAs(blob, "resume-analysis-report.docx");
         });
     }
 
@@ -545,80 +573,94 @@ class ResumeAnalyzer {
     }
 
     exportEnhancedResumeToWord() {
-        if (!this.analysis || !this.analysis.enhancedResume) return;
-        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ShadingType, BorderStyle } = docx;
+        if (!this.analysis?.enhancedResume) return;
+
+        // Get docx from window object since we're using CDN
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = window.docx;
         const resume = this.analysis.enhancedResume;
-        const children = [];
 
-        // Name and Contact
-        children.push(new Paragraph({
-            text: resume.name,
-            heading: HeadingLevel.TITLE,
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 100 }
-        }));
-        children.push(new Paragraph({
-            text: resume.contact.join(' | '),
-            alignment: AlignmentType.CENTER,
-            style: "IntenseQuote",
-            spacing: { after: 200 },
-            border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } }
-        }));
+        const children = [
+            // Name
+            new Paragraph({
+                text: resume.name,
+                heading: HeadingLevel.TITLE,
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 200 }
+            }),
 
-        // Summary
-        children.push(new Paragraph({
-            children: [new TextRun({ text: resume.summary, size: 22 })],
-            spacing: { after: 200 }
-        }));
+            // Contact Info
+            new Paragraph({
+                text: resume.contact.join(' | '),
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 400 }
+            }),
+
+            // Summary
+            new Paragraph({
+                text: resume.summary,
+                spacing: { before: 200, after: 400 }
+            })
+        ];
 
         // Sections
         resume.sections.forEach(section => {
-            children.push(new Paragraph({
-                children: [new TextRun({ text: section.title.toUpperCase(), bold: true, color: "2563EB", size: 28 })],
-                spacing: { before: 300, after: 100 },
-                border: { bottom: { color: "2563EB", space: 1, value: "single", size: 8 } }
-            }));
+            // Section Title
+            children.push(
+                new Paragraph({
+                    text: section.title.toUpperCase(),
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 400, after: 200 }
+                })
+            );
 
+            // Section Items
             section.items.forEach(item => {
-                children.push(new Paragraph({
-                    children: [new TextRun({ text: item.header, bold: true, size: 24 })],
-                    spacing: { before: 150 }
-                }));
+                children.push(
+                    new Paragraph({
+                        text: item.header,
+                        heading: HeadingLevel.HEADING_2,
+                        spacing: { before: 200, after: 100 }
+                    })
+                );
+
                 if (item.subheader) {
-                    children.push(new Paragraph({
-                        children: [new TextRun({ text: item.subheader, italics: true, size: 22, color: "555555" })],
-                        spacing: { after: 50 }
-                    }));
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun({
+                                    text: item.subheader,
+                                    italics: true
+                                })
+                            ],
+                            spacing: { before: 100, after: 200 }
+                        })
+                    );
                 }
+
+                // Bullet Points
                 item.points.forEach(point => {
-                    children.push(new Paragraph({
-                        text: point,
-                        bullet: { level: 0 },
-                        style: 'ListParagraph',
-                        spacing: { after: 80 }
-                    }));
+                    children.push(
+                        new Paragraph({
+                            children: [
+                                new TextRun("• "),
+                                new TextRun(point)
+                            ],
+                            spacing: { before: 100, after: 100 }
+                        })
+                    );
                 });
             });
         });
 
         const doc = new Document({
-            styles: {
-                paragraphStyles: [{
-                    id: "ListParagraph",
-                    name: "List Paragraph",
-                    basedOn: "Normal",
-                    quickFormat: true,
-                    run: { size: 22 }
-                }]
-            },
-            sections: [{ children: children }]
+            sections: [{ children }]
         });
 
+        // Generate and save document
         Packer.toBlob(doc).then(blob => {
-            saveAs(blob, 'enhanced-resume.docx');
+            window.saveAs(blob, "enhanced-resume.docx");
         });
     }
-
 }
 
 // Initialize the application when the DOM is loaded
