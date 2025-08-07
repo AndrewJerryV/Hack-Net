@@ -122,7 +122,7 @@ class ResumeAnalyzer {
     async getAiAnalysis(resume, jobDesc) {
         const prompt = `
             Act as an expert resume analyzer and career coach. Your task is to analyze the provided resume against the given job description.
-            Provide a detailed analysis and an enhanced version of the resume.
+            Provide a detailed analysis and an enhanced, structured version of the resume.
             Return the output ONLY as a JSON object that strictly follows the provided schema. Do not include any text, notes, or explanations outside of the JSON object.
 
             Resume:
@@ -144,7 +144,37 @@ class ResumeAnalyzer {
                 "missingKeywords": { "type": "ARRAY", "items": { "type": "STRING" }, "description": "A list of the 5-10 most critical keywords from the job description that are MISSING from the resume." },
                 "suggestions": { "type": "ARRAY", "items": { "type": "STRING" }, "description": "A list of 3-5 specific, actionable suggestions for improving the resume. For example, 'Quantify your achievements in the project management role with metrics like budget size or team count.'" },
                 "skillGaps": { "type": "ARRAY", "items": { "type": "STRING" }, "description": "A list of specific skills mentioned in the job description that are missing from the resume." },
-                "enhancedResume": { "type": "STRING", "description": "A complete, rewritten, and enhanced version of the original resume. Integrate missing keywords naturally, quantify achievements, and improve the overall structure and wording to better align with the job description. Preserve the core information but optimize its presentation. Use '\n' for line breaks." }
+                "enhancedResume": {
+                    "type": "OBJECT",
+                    "description": "A structured, enhanced version of the resume, optimized for the job description.",
+                    "properties": {
+                        "name": { "type": "STRING", "description": "The candidate's full name." },
+                        "contact": { "type": "ARRAY", "items": { "type": "STRING" }, "description": "An array of contact details like phone, email, LinkedIn URL, and location." },
+                        "summary": { "type": "STRING", "description": "A professional summary." },
+                        "sections": {
+                            "type": "ARRAY",
+                            "description": "An array of resume sections like 'Work Experience', 'Education', 'Skills'.",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "title": { "type": "STRING", "description": "The title of the section (e.g., 'Work Experience')." },
+                                    "items": {
+                                        "type": "ARRAY",
+                                        "description": "An array of entries within the section.",
+                                        "items": {
+                                            "type": "OBJECT",
+                                            "properties": {
+                                                "header": { "type": "STRING", "description": "The main line for an entry, e.g., 'Software Engineer | Google | 2020-Present' or 'B.S. in Computer Science'." },
+                                                "subheader": { "type": "STRING", "description": "An optional secondary line, e.g., 'Mountain View, CA' or 'University of California, Berkeley'." },
+                                                "points": { "type": "ARRAY", "items": { "type": "STRING" }, "description": "An array of bullet points describing responsibilities and achievements." }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
             required: ["atsScore", "matchedKeywords", "missingKeywords", "suggestions", "skillGaps", "enhancedResume"]
         };
@@ -261,7 +291,60 @@ class ResumeAnalyzer {
     }
 
     displayEnhancedResume() {
-        document.getElementById('enhanced-resume-content').textContent = this.analysis.enhancedResume;
+        const container = document.getElementById('enhanced-resume-content');
+        const resume = this.analysis.enhancedResume;
+        if (!resume) {
+            container.innerHTML = '<p>Could not generate enhanced resume.</p>';
+            return;
+        }
+
+        let html = '';
+
+        // Name and Contact
+        if (resume.name) {
+            html += `<h1 class="text-4xl font-bold text-center text-gray-900">${resume.name}</h1>`;
+        }
+        if (resume.contact && resume.contact.length > 0) {
+            html += `<div class="text-center text-sm text-gray-600 mt-2 pb-4 border-b">${resume.contact.join(' &bull; ')}</div>`;
+        }
+
+        // Summary
+        if (resume.summary) {
+            html += `<div class="mt-6"><p>${resume.summary}</p></div>`;
+        }
+        
+        // Sections (Experience, Education, etc.)
+        if (resume.sections && resume.sections.length > 0) {
+            resume.sections.forEach(section => {
+                html += `
+                    <div class="mt-6">
+                        <h2 class="text-xl font-bold text-blue-600 uppercase border-b-2 border-blue-600 pb-1 mb-3">${section.title}</h2>
+                        <div class="space-y-4">
+                `;
+                if (section.items && section.items.length > 0) {
+                    section.items.forEach(item => {
+                        html += '<div>';
+                        if(item.header) {
+                            html += `<h3 class="text-lg font-semibold text-gray-800">${item.header}</h3>`;
+                        }
+                        if(item.subheader) {
+                             html += `<p class="text-sm font-medium text-gray-600 italic">${item.subheader}</p>`;
+                        }
+                        if (item.points && item.points.length > 0) {
+                            html += '<ul class="list-disc list-inside mt-1 space-y-1 text-gray-700">';
+                            item.points.forEach(point => {
+                                html += `<li>${point}</li>`;
+                            });
+                            html += '</ul>';
+                        }
+                        html += '</div>';
+                    });
+                }
+                html += '</div></div>';
+            });
+        }
+
+        container.innerHTML = html;
     }
 
     /**
@@ -377,29 +460,165 @@ class ResumeAnalyzer {
     exportEnhancedResumeToPDF() {
         if (!this.analysis || !this.analysis.enhancedResume) return;
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        const margin = 15;
-        const textLines = doc.splitTextToSize(this.analysis.enhancedResume, 210 - (margin * 2));
+        const resume = this.analysis.enhancedResume;
+        const doc = new jsPDF('p', 'pt', 'a4');
+        const margin = 40;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        let y = margin;
 
+        const checkPageBreak = (spaceNeeded) => {
+            if (y + spaceNeeded > doc.internal.pageSize.getHeight() - margin) {
+                doc.addPage();
+                y = margin;
+            }
+        };
+
+        // Name
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(24);
+        doc.setTextColor('#111827');
+        doc.text(resume.name, pageWidth / 2, y, { align: 'center' });
+        y += 20;
+
+        // Contact
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor('#4B5563');
+        doc.text(resume.contact.join(' | '), pageWidth / 2, y, { align: 'center' });
+        y += 20;
+        doc.setDrawColor('#E5E7EB');
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 25;
+
+        // Summary
         doc.setFontSize(11);
-        doc.text(textLines, margin, margin);
+        const summaryLines = doc.splitTextToSize(resume.summary, pageWidth - margin * 2);
+        doc.text(summaryLines, margin, y);
+        y += summaryLines.length * 14;
+
+        // Sections
+        resume.sections.forEach(section => {
+            checkPageBreak(50);
+            y += 20;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.setTextColor('#2563EB');
+            doc.text(section.title.toUpperCase(), margin, y);
+            y += 8;
+            doc.setDrawColor('#2563EB');
+            doc.setLineWidth(1.5);
+            doc.line(margin, y, margin + 80, y);
+            y += 20;
+
+            section.items.forEach(item => {
+                checkPageBreak(30);
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor('#1F2937');
+                doc.text(item.header, margin, y);
+                y += 15;
+
+                if (item.subheader) {
+                    checkPageBreak(15);
+                    doc.setFont('helvetica', 'normal_italic');
+                    doc.setFontSize(10);
+                    doc.setTextColor('#4B5563');
+                    doc.text(item.subheader, margin, y);
+                    y += 15;
+                }
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(11);
+                doc.setTextColor('#374151');
+                item.points.forEach(point => {
+                    const pointLines = doc.splitTextToSize(point, pageWidth - margin * 2 - 15);
+                    checkPageBreak(pointLines.length * 14);
+                    doc.text(`•`, margin, y, { align: 'left' });
+                    doc.text(pointLines, margin + 10, y);
+                    y += pointLines.length * 14;
+                });
+                y += 10;
+            });
+        });
+
         doc.save('enhanced-resume.pdf');
     }
 
     exportEnhancedResumeToWord() {
         if (!this.analysis || !this.analysis.enhancedResume) return;
-        const { Document, Packer, Paragraph } = docx;
-        
-        const paragraphs = this.analysis.enhancedResume.split('\n').map(text => new Paragraph({ text }));
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ShadingType, BorderStyle } = docx;
+        const resume = this.analysis.enhancedResume;
+        const children = [];
+
+        // Name and Contact
+        children.push(new Paragraph({
+            text: resume.name,
+            heading: HeadingLevel.TITLE,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 100 }
+        }));
+        children.push(new Paragraph({
+            text: resume.contact.join(' | '),
+            alignment: AlignmentType.CENTER,
+            style: "IntenseQuote",
+            spacing: { after: 200 },
+            border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } }
+        }));
+
+        // Summary
+        children.push(new Paragraph({
+            children: [new TextRun({ text: resume.summary, size: 22 })],
+            spacing: { after: 200 }
+        }));
+
+        // Sections
+        resume.sections.forEach(section => {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: section.title.toUpperCase(), bold: true, color: "2563EB", size: 28 })],
+                spacing: { before: 300, after: 100 },
+                border: { bottom: { color: "2563EB", space: 1, value: "single", size: 8 } }
+            }));
+
+            section.items.forEach(item => {
+                children.push(new Paragraph({
+                    children: [new TextRun({ text: item.header, bold: true, size: 24 })],
+                    spacing: { before: 150 }
+                }));
+                if (item.subheader) {
+                    children.push(new Paragraph({
+                        children: [new TextRun({ text: item.subheader, italics: true, size: 22, color: "555555" })],
+                        spacing: { after: 50 }
+                    }));
+                }
+                item.points.forEach(point => {
+                    children.push(new Paragraph({
+                        text: point,
+                        bullet: { level: 0 },
+                        style: 'ListParagraph',
+                        spacing: { after: 80 }
+                    }));
+                });
+            });
+        });
 
         const doc = new Document({
-            sections: [{ children: paragraphs }],
+            styles: {
+                paragraphStyles: [{
+                    id: "ListParagraph",
+                    name: "List Paragraph",
+                    basedOn: "Normal",
+                    quickFormat: true,
+                    run: { size: 22 }
+                }]
+            },
+            sections: [{ children: children }]
         });
 
         Packer.toBlob(doc).then(blob => {
             saveAs(blob, 'enhanced-resume.docx');
         });
     }
+
 }
 
 // Initialize the application when the DOM is loaded
