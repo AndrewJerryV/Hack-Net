@@ -4,207 +4,210 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resume Customization AI</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            transform: translateY(-2px);
+        }
+        .tab-btn.active {
+            border-color: #3B82F6;
+            color: #3B82F6;
+            background-color: #EFF6FF;
+        }
+        .spinner {
+            border-top-color: #3B82F6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .progress-fill {
+            transition: width 0.5s ease-in-out;
+        }
+        .score-excellent { color: #10B981; }
+        .progress-excellent { background-color: #10B981; }
+        .score-good { color: #F59E0B; }
+        .progress-good { background-color: #F59E0B; }
+        .score-poor { color: #EF4444; }
+        .progress-poor { background-color: #EF4444; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+    </style>
 </head>
-<body>
-    <div class="container">
+<body class="bg-gray-50 text-gray-800">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
         <!-- Header -->
-        <header class="header">
-            <h1>Resume Customization AI</h1>
-            <p>Optimize your resume for any job with AI-powered insights</p>
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Resume Customization AI</h1>
+            <p class="text-lg text-gray-600 mt-2">Optimize your resume for any job with AI-powered insights</p>
         </header>
 
         <!-- Input Section -->
-        <div class="input-section">
-            <div class="input-grid">
+        <div class="mb-8">
+            <div class="grid md:grid-cols-2 gap-8">
                 <!-- Resume Input -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-file-text"></i> Your Resume</h3>
-                        <p>Upload your resume or paste the content below</p>
+                <div class="card p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-file-alt text-2xl text-blue-500 mr-4"></i>
+                        <div>
+                            <h3 class="text-xl font-semibold">Your Resume</h3>
+                            <p class="text-gray-500">Upload or paste your resume content</p>
+                        </div>
                     </div>
-                    <div class="card-content">
-                        <div class="form-group">
-                            <label for="resume-upload">Upload Resume (TXT file)</label>
-                            <input type="file" id="resume-upload" accept=".txt" class="file-input">
-                        </div>
-                        <div class="form-group">
-                            <label for="resume-text">Or paste your resume content</label>
-                            <textarea id="resume-text" placeholder="Paste your resume content here..." rows="15"></textarea>
-                        </div>
+                    <div>
+                        <label for="resume-upload" class="block text-sm font-medium text-gray-700 mb-2">Upload Resume (.txt)</label>
+                        <input type="file" id="resume-upload" accept=".txt" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                        <textarea id="resume-text" placeholder="Or paste your resume content here..." rows="12" class="mt-4 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"></textarea>
                     </div>
                 </div>
 
                 <!-- Job Description Input -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3><i class="fas fa-bullseye"></i> Job Description</h3>
-                        <p>Paste the job description you want to target</p>
-                    </div>
-                    <div class="card-content">
-                        <div class="form-group">
-                            <textarea id="job-description" placeholder="Paste the job description here..." rows="18"></textarea>
+                <div class="card p-6">
+                     <div class="flex items-center mb-4">
+                        <i class="fas fa-briefcase text-2xl text-blue-500 mr-4"></i>
+                        <div>
+                            <h3 class="text-xl font-semibold">Job Description</h3>
+                            <p class="text-gray-500">Paste the job description to target</p>
                         </div>
                     </div>
+                    <textarea id="job-description" placeholder="Paste the job description here..." rows="15" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"></textarea>
                 </div>
             </div>
 
             <!-- Analyze Button -->
-            <div class="analyze-section">
-                <button id="analyze-btn" class="analyze-btn" disabled>
-                    <i class="fas fa-bolt"></i>
-                    <span>Analyze & Customize Resume</span>
+            <div class="text-center mt-8">
+                <button id="analyze-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-700 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center mx-auto" disabled>
+                    <i class="fas fa-bolt mr-2"></i>
+                    <span>Analyze & Customize</span>
                 </button>
-                <div id="loading" class="loading hidden">
-                    <div class="spinner"></div>
-                    <span>Analyzing...</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Export Section -->
-        <div id="export-section" class="export-section hidden">
-            <div class="export-header">
-                <h3><i class="fas fa-download"></i> Export Options</h3>
-                <p>Download your analysis report or enhanced resume</p>
-            </div>
-            
-            <div class="export-categories">
-                <!-- Analysis Report Export -->
-                <div class="export-category">
-                    <h4>Analysis Report</h4>
-                    <div class="export-buttons">
-                        <button id="export-pdf-btn" class="export-btn pdf-btn">
-                            <i class="fas fa-file-pdf"></i>
-                            <span>Report to PDF</span>
-                        </button>
-                        <button id="export-word-btn" class="export-btn word-btn">
-                            <i class="fas fa-file-word"></i>
-                            <span>Report to Word</span>
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Enhanced Resume Export -->
-                <div class="export-category">
-                    <h4>Enhanced Resume</h4>
-                    <div class="export-buttons">
-                        <button id="export-enhanced-pdf-btn" class="export-btn enhanced-pdf-btn">
-                            <i class="fas fa-file-pdf"></i>
-                            <span>Resume to PDF</span>
-                        </button>
-                        <button id="export-enhanced-word-btn" class="export-btn enhanced-word-btn">
-                            <i class="fas fa-file-word"></i>
-                            <span>Resume to Word</span>
-                        </button>
-                    </div>
+                <div id="loading" class="hidden text-center mt-4">
+                    <div class="spinner w-8 h-8 border-4 border-gray-200 border-t-blue-500 rounded-full inline-block"></div>
+                    <p class="mt-2 text-gray-600">AI is analyzing... this may take a moment.</p>
                 </div>
             </div>
         </div>
 
         <!-- Results Section -->
-        <div id="results-section" class="results-section hidden">
-            <!-- ATS Score -->
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-chart-line"></i> ATS Compatibility Score</h3>
+        <div id="results-section" class="hidden">
+            <!-- ATS Score and Export -->
+            <div class="grid md:grid-cols-3 gap-8 mb-8">
+                <div class="md:col-span-1 card p-6 flex flex-col justify-center items-center">
+                     <h3 class="text-xl font-semibold mb-4 text-center">ATS Compatibility Score</h3>
+                     <div class="relative w-40 h-40">
+                         <svg class="w-full h-full" viewBox="0 0 36 36">
+                            <path class="text-gray-200" stroke-width="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <path id="progress-ring" class="progress-poor" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                         </svg>
+                         <div id="ats-score" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl font-bold">0%</div>
+                     </div>
+                     <div id="score-label" class="mt-4 text-lg font-medium">Needs Improvement</div>
                 </div>
-                <div class="card-content">
-                    <div class="score-display">
-                        <div class="score-info">
-                            <div id="ats-score" class="score-number">0%</div>
-                            <div id="score-label" class="score-label">Needs Improvement</div>
-                        </div>
-                        <div class="progress-container">
-                            <div class="progress-label">ATS Compatibility</div>
-                            <div class="progress-bar">
-                                <div id="progress-fill" class="progress-fill"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="alert">
-                        <i class="fas fa-check-circle"></i>
-                        <span id="score-message">Your resume analysis will appear here.</span>
+                 <div class="md:col-span-2 card p-6">
+                    <h3 class="text-xl font-semibold mb-4">Analysis & Enhanced Resume</h3>
+                    <p id="score-message" class="text-gray-600 mb-6">Your resume analysis will appear here.</p>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <button id="export-pdf-btn" class="w-full bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition flex items-center justify-center"><i class="fas fa-file-pdf mr-2"></i>Export Analysis (PDF)</button>
+                        <button id="export-word-btn" class="w-full bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-600 transition flex items-center justify-center"><i class="fas fa-file-word mr-2"></i>Export Analysis (Word)</button>
+                        <button id="export-enhanced-pdf-btn" class="w-full bg-green-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-600 transition flex items-center justify-center"><i class="fas fa-file-pdf mr-2"></i>Export Resume (PDF)</button>
+                        <button id="export-enhanced-word-btn" class="w-full bg-indigo-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-600 transition flex items-center justify-center"><i class="fas fa-file-word mr-2"></i>Export Resume (Word)</button>
                     </div>
                 </div>
             </div>
 
             <!-- Tabs -->
-            <div class="tabs-container">
-                <div class="tabs-nav">
-                    <button class="tab-btn active" data-tab="keywords">Keywords</button>
-                    <button class="tab-btn" data-tab="suggestions">Suggestions</button>
-                    <button class="tab-btn" data-tab="skills">Skill Gaps</button>
-                    <button class="tab-btn" data-tab="enhanced">Enhanced Content</button>
+            <div class="card">
+                <div class="tabs-nav border-b border-gray-200">
+                    <nav class="flex -mb-px">
+                        <button class="tab-btn active w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm" data-tab="enhanced">Enhanced Resume</button>
+                        <button class="tab-btn w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm" data-tab="suggestions">Suggestions</button>
+                        <button class="tab-btn w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm" data-tab="keywords">Keywords</button>
+                        <button class="tab-btn w-1/4 py-4 px-1 text-center border-b-2 font-medium text-sm" data-tab="skills">Skill Gaps</button>
+                    </nav>
                 </div>
 
-                <!-- Keywords Tab -->
-                <div id="keywords-tab" class="tab-content active">
-                    <div class="keywords-grid">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="success-text"><i class="fas fa-check-circle"></i> Matched Keywords</h3>
-                                <p>Keywords found in your resume</p>
-                            </div>
-                            <div class="card-content">
-                                <div id="matched-keywords" class="keywords-container"></div>
-                            </div>
-                        </div>
+                <div class="p-6">
+                    <!-- Enhanced Resume Tab -->
+                    <div id="enhanced-tab" class="tab-content active">
+                         <h3 class="text-2xl font-semibold mb-4">AI-Enhanced Resume</h3>
+                         <p class="text-gray-600 mb-4">Here is an optimized version of your resume. Copy this content or export it directly.</p>
+                         <div id="enhanced-resume-content" class="p-4 bg-gray-50 border rounded-lg whitespace-pre-wrap font-mono text-sm"></div>
+                    </div>
 
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="error-text"><i class="fas fa-exclamation-triangle"></i> Missing Keywords</h3>
-                                <p>Important keywords to add</p>
+                    <!-- Suggestions Tab -->
+                    <div id="suggestions-tab" class="tab-content hidden">
+                        <h3 class="text-2xl font-semibold mb-4">Improvement Suggestions</h3>
+                        <div id="suggestions-list" class="space-y-4"></div>
+                    </div>
+
+                    <!-- Keywords Tab -->
+                    <div id="keywords-tab" class="tab-content hidden">
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <div>
+                                <h3 class="text-xl font-semibold text-green-600 mb-3"><i class="fas fa-check-circle mr-2"></i>Matched Keywords</h3>
+                                <div id="matched-keywords" class="flex flex-wrap gap-2"></div>
                             </div>
-                            <div class="card-content">
-                                <div id="missing-keywords" class="keywords-container"></div>
+                            <div>
+                                <h3 class="text-xl font-semibold text-red-600 mb-3"><i class="fas fa-times-circle mr-2"></i>Missing Keywords</h3>
+                                <div id="missing-keywords" class="flex flex-wrap gap-2"></div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Suggestions Tab -->
-                <div id="suggestions-tab" class="tab-content">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Enhancement Suggestions</h3>
-                            <p>AI-powered recommendations to improve your resume</p>
-                        </div>
-                        <div class="card-content">
-                            <div id="suggestions-list" class="suggestions-list"></div>
-                        </div>
+                    <!-- Skill Gaps Tab -->
+                    <div id="skills-tab" class="tab-content hidden">
+                        <h3 class="text-2xl font-semibold mb-4 text-yellow-600"><i class="fas fa-exclamation-triangle mr-2"></i>Skill Gap Analysis</h3>
+                        <p class="text-gray-600 mb-4">These skills are in the job description but not clearly identified in your resume.</p>
+                        <div id="skill-gaps" class="flex flex-wrap gap-3"></div>
                     </div>
-                </div>
-
-                <!-- Skill Gaps Tab -->
-                <div id="skills-tab" class="tab-content">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="warning-text">Skill Gap Analysis</h3>
-                            <p>Skills mentioned in the job description but missing from your resume</p>
-                        </div>
-                        <div class="card-content">
-                            <div id="skill-gaps" class="skill-gaps-container"></div>
-                            <div class="alert warning-alert">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span>Consider adding these skills to your resume if you have experience with them, or highlight related experience that demonstrates these capabilities.</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Enhanced Content Tab -->
-                <div id="enhanced-tab" class="tab-content">
-                    <div id="enhanced-sections" class="enhanced-sections"></div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <i class="fas fa-exclamation-circle text-red-500 text-4xl mb-4"></i>
+            <h3 class="text-xl font-bold mb-2">Analysis Failed</h3>
+            <p id="error-message" class="text-gray-600"></p>
+            <button id="close-modal-btn" class="mt-6 bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600">Close</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
