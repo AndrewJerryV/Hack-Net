@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Customization AI</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>Resume Customization AI</h1>
+            <p>Optimize your resume for any job with AI-powered insights</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="input-section">
+            <div class="input-grid">
+                <!-- Resume Input -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-file-text"></i> Your Resume</h3>
+                        <p>Upload your resume or paste the content below</p>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <label for="resume-upload">Upload Resume (TXT file)</label>
+                            <input type="file" id="resume-upload" accept=".txt" class="file-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="resume-text">Or paste your resume content</label>
+                            <textarea id="resume-text" placeholder="Paste your resume content here..." rows="15"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Description Input -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-bullseye"></i> Job Description</h3>
+                        <p>Paste the job description you want to target</p>
+                    </div>
+                    <div class="card-content">
+                        <div class="form-group">
+                            <textarea id="job-description" placeholder="Paste the job description here..." rows="18"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analyze Button -->
+            <div class="analyze-section">
+                <button id="analyze-btn" class="analyze-btn" disabled>
+                    <i class="fas fa-bolt"></i>
+                    <span>Analyze & Customize Resume</span>
+                </button>
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <span>Analyzing...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Section -->
+        <div id="export-section" class="export-section hidden">
+            <div class="export-header">
+                <h3><i class="fas fa-download"></i> Export Options</h3>
+                <p>Download your analysis report or enhanced resume</p>
+            </div>
+            
+            <div class="export-categories">
+                <!-- Analysis Report Export -->
+                <div class="export-category">
+                    <h4>Analysis Report</h4>
+                    <div class="export-buttons">
+                        <button id="export-pdf-btn" class="export-btn pdf-btn">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Report to PDF</span>
+                        </button>
+                        <button id="export-word-btn" class="export-btn word-btn">
+                            <i class="fas fa-file-word"></i>
+                            <span>Report to Word</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Enhanced Resume Export -->
+                <div class="export-category">
+                    <h4>Enhanced Resume</h4>
+                    <div class="export-buttons">
+                        <button id="export-enhanced-pdf-btn" class="export-btn enhanced-pdf-btn">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Resume to PDF</span>
+                        </button>
+                        <button id="export-enhanced-word-btn" class="export-btn enhanced-word-btn">
+                            <i class="fas fa-file-word"></i>
+                            <span>Resume to Word</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="results-section hidden">
+            <!-- ATS Score -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-chart-line"></i> ATS Compatibility Score</h3>
+                </div>
+                <div class="card-content">
+                    <div class="score-display">
+                        <div class="score-info">
+                            <div id="ats-score" class="score-number">0%</div>
+                            <div id="score-label" class="score-label">Needs Improvement</div>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-label">ATS Compatibility</div>
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert">
+                        <i class="fas fa-check-circle"></i>
+                        <span id="score-message">Your resume analysis will appear here.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs-container">
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="keywords">Keywords</button>
+                    <button class="tab-btn" data-tab="suggestions">Suggestions</button>
+                    <button class="tab-btn" data-tab="skills">Skill Gaps</button>
+                    <button class="tab-btn" data-tab="enhanced">Enhanced Content</button>
+                </div>
+
+                <!-- Keywords Tab -->
+                <div id="keywords-tab" class="tab-content active">
+                    <div class="keywords-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="success-text"><i class="fas fa-check-circle"></i> Matched Keywords</h3>
+                                <p>Keywords found in your resume</p>
+                            </div>
+                            <div class="card-content">
+                                <div id="matched-keywords" class="keywords-container"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="error-text"><i class="fas fa-exclamation-triangle"></i> Missing Keywords</h3>
+                                <p>Important keywords to add</p>
+                            </div>
+                            <div class="card-content">
+                                <div id="missing-keywords" class="keywords-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Suggestions Tab -->
+                <div id="suggestions-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Enhancement Suggestions</h3>
+                            <p>AI-powered recommendations to improve your resume</p>
+                        </div>
+                        <div class="card-content">
+                            <div id="suggestions-list" class="suggestions-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skill Gaps Tab -->
+                <div id="skills-tab" class="tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="warning-text">Skill Gap Analysis</h3>
+                            <p>Skills mentioned in the job description but missing from your resume</p>
+                        </div>
+                        <div class="card-content">
+                            <div id="skill-gaps" class="skill-gaps-container"></div>
+                            <div class="alert warning-alert">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Consider adding these skills to your resume if you have experience with them, or highlight related experience that demonstrates these capabilities.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Content Tab -->
+                <div id="enhanced-tab" class="tab-content">
+                    <div id="enhanced-sections" class="enhanced-sections"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
