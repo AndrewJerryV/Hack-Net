@@ -1,30 +1,62 @@
-# Resume customization tool
+# RESUME CUSTOMIZATION AI
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/gourib693-9431s-projects/v0-resume-customization-tool)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/o2BdjDRuy3s)
+### Team Members
 
-## Overview
+- Andrew Jerry V
+- Visakh Vinod
+- Aron Eapen Thomas
+- Gouri B
+- Steena Stephen
+  
+## Project Description
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+Students often struggle with creating tailored resumes for different job opportunities. Many submit generic resumes that are not optimized for the job description, leading to rejection by Applicant Tracking Systems (ATS) even before reaching recruiters. This AI-powered tool helps students instantly personalize their resumes based on specific job descriptions, improving match accuracy and increasing their chances of getting shortlisted.
 
-## Deployment
 
-Your project is live at:
+## Use Case
 
-**[https://vercel.com/gourib693-9431s-projects/v0-resume-customization-tool](https://vercel.com/gourib693-9431s-projects/v0-resume-customization-tool)**
+Scenario: A college student is applying to multiple companies for internships or jobs. Each job has a slightly different requirement, but the student continues to use a single static resume.
+Problem: Recruiters and ATS systems filter out resumes that don’t include relevant keywords or skills.
+Solution: The Resume Customization AI allows students to:
 
-## Build your app
+Upload their base resume
 
-Continue building your app on:
+Paste the job description
 
-**[https://v0.dev/chat/projects/o2BdjDRuy3s](https://v0.dev/chat/projects/o2BdjDRuy3s)**
+Automatically receive a tailored resume with suggestions, keyword highlights, and ATS optimization score
 
-## How It Works
+## Problem Statement
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+Students often submit one-size-fits-all resumes that do not align with specific job descriptions. Manually tailoring resumes for each application is time-consuming and tedious, and students are generally unaware of ATS (Applicant Tracking System) requirements.
+
+
+## Solution
+
+ A smart, web-based Resume Customization AI Tool that:
+
+Analyzes the Job Description
+
+Uses NLP to extract required skills, tools, keywords.
+
+Parses and Evaluates the Student’s Resume
+
+Highlights missing skills or weak phrasing.
+
+Provides a Resume Match Score (ATS Score)
+
+Shows how well the resume aligns with the JD.
+
+Offers Enhancement Suggestions
+
+Suggests strong action verbs, better phrasing, and keyword inclusions.
+
+Displays a Visual Feedback Dashboard
+
+Includes keyword match %, skill gap indicators, and ATS score chart.
+
+Allows Export to PDF and Word
+
+After customization, the user can download the resume in their preferred format.
+
+
