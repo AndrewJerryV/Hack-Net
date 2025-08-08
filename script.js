@@ -8,7 +8,7 @@ class ResumeAnalyzer {
         this.isLoading = false;
         // --- GEMINI API DETAILS ---
         // The execution environment will automatically provide it.
-        this.apiKey = this.GEMINI_API_KEY;
+        this.apiKey = "AIzaSyB9afRVbbNgRA-znv9XoLTXFT9DqPIXm1E";
         this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${this.apiKey}`;
         // Bind methods and initialize
         this.handleAnalyzeClick = this.handleAnalyzeClick.bind(this);
