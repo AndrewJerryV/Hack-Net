@@ -1,6 +1,6 @@
 class ResumeAnalyzer {
-    GEMINI_API_KEY = "GEMINI_KEY_PLACEHOLDER";
     constructor() {
+        this.GEMINI_API_KEY = "GEMINI_KEY_PLACEHOLDER";
         // --- STATE ---
         this.resumeText = '';
         this.jobDescription = '';
@@ -8,7 +8,7 @@ class ResumeAnalyzer {
         this.isLoading = false;
         // --- GEMINI API DETAILS ---
         // The execution environment will automatically provide it.
-        this.apiKey = this.GEMINI_API_KEY; 
+        this.apiKey = this.GEMINI_API_KEY;
         this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${this.apiKey}`;
         // Bind methods and initialize
         this.handleAnalyzeClick = this.handleAnalyzeClick.bind(this);
@@ -70,7 +70,7 @@ class ResumeAnalyzer {
         const hasContent = this.resumeText.trim() && this.jobDescription.trim();
         analyzeBtn.disabled = !hasContent || this.isLoading;
     }
-    
+
     /**
      * Toggles the loading state of the UI.
      * @param {boolean} isLoading - Whether to show the loading indicator.
@@ -200,12 +200,12 @@ class ResumeAnalyzer {
             }
 
             const result = await response.json();
-            
+
             if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
                 const jsonText = result.candidates[0].content.parts[0].text;
                 return JSON.parse(jsonText);
             } else {
-                 console.error("Invalid API response structure:", result);
+                console.error("Invalid API response structure:", result);
                 throw new Error("Received an invalid response from the AI. It might be busy. Please try again.");
             }
         } catch (error) {
@@ -261,12 +261,12 @@ class ResumeAnalyzer {
 
     displayKeywords() {
         const createKeywordBadge = (keyword, type) => {
-            const color = type === 'matched' 
-                ? 'bg-green-100 text-green-800' 
+            const color = type === 'matched'
+                ? 'bg-green-100 text-green-800'
                 : 'bg-red-100 text-red-800';
             return `<span class="py-1 px-3 rounded-full text-sm font-medium ${color}">${keyword}</span>`;
         };
-        
+
         document.getElementById('matched-keywords').innerHTML = this.analysis.matchedKeywords.map(k => createKeywordBadge(k, 'matched')).join('');
         document.getElementById('missing-keywords').innerHTML = this.analysis.missingKeywords.map(k => createKeywordBadge(k, 'missing')).join('');
     }
@@ -310,7 +310,7 @@ class ResumeAnalyzer {
         if (resume.summary) {
             html += `<div class="mt-6"><p>${resume.summary}</p></div>`;
         }
-        
+
         // Sections (Experience, Education, etc.)
         if (resume.sections && resume.sections.length > 0) {
             resume.sections.forEach(section => {
@@ -322,11 +322,11 @@ class ResumeAnalyzer {
                 if (section.items && section.items.length > 0) {
                     section.items.forEach(item => {
                         html += '<div>';
-                        if(item.header) {
+                        if (item.header) {
                             html += `<h3 class="text-lg font-semibold text-gray-800">${item.header}</h3>`;
                         }
-                        if(item.subheader) {
-                             html += `<p class="text-sm font-medium text-gray-600 italic">${item.subheader}</p>`;
+                        if (item.subheader) {
+                            html += `<p class="text-sm font-medium text-gray-600 italic">${item.subheader}</p>`;
                         }
                         if (item.points && item.points.length > 0) {
                             html += '<ul class="list-disc list-inside mt-1 space-y-1 text-gray-700">';
@@ -356,7 +356,7 @@ class ResumeAnalyzer {
         document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
         document.getElementById(`${tabName}-tab`).classList.remove('hidden');
     }
-    
+
     /**
      * Shows or hides the error modal.
      * @param {boolean} show - Whether to display the modal.
@@ -386,7 +386,7 @@ class ResumeAnalyzer {
         doc.setFontSize(12);
         doc.text(`ATS Score: ${this.analysis.atsScore}%`, 10, y);
         y += 15;
-        
+
         const addSection = (title, items, isList = true) => {
             if (y > 260) { doc.addPage(); y = 20; }
             doc.setFontSize(14);
@@ -401,10 +401,10 @@ class ResumeAnalyzer {
                     y += lines.length * 5;
                 });
             } else {
-                 const lines = doc.splitTextToSize(items.join(', '), 180);
-                 if (y + lines.length * 5 > 280) { doc.addPage(); y = 20; }
-                 doc.text(lines, 15, y);
-                 y += lines.length * 5;
+                const lines = doc.splitTextToSize(items.join(', '), 180);
+                if (y + lines.length * 5 > 280) { doc.addPage(); y = 20; }
+                doc.text(lines, 15, y);
+                y += lines.length * 5;
             }
             y += 5;
         };
@@ -419,7 +419,7 @@ class ResumeAnalyzer {
 
     exportAnalysisToWord() {
         if (!this.analysis) return;
-        
+
         // Get docx from window object since we're using CDN
         const { Document, Packer, Paragraph, TextRun, HeadingLevel } = window.docx;
 
