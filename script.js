@@ -1,5 +1,5 @@
 class ResumeAnalyzer {
-    const GEMINI_API_KEY = "GEMINI_KEY_PLACEHOLDER";
+    GEMINI_API_KEY = "GEMINI_KEY_PLACEHOLDER";
     constructor() {
         // --- STATE ---
         this.resumeText = '';
