@@ -13,6 +13,7 @@
 
 Students often struggle with creating tailored resumes for different job opportunities. Many submit generic resumes that are not optimized for the job description, leading to rejection by Applicant Tracking Systems (ATS) even before reaching recruiters. This AI-powered tool helps students instantly personalize their resumes based on specific job descriptions, improving match accuracy and increasing their chances of getting shortlisted.
 
+Check it out: https://andrewjerryv.github.io/Hack-Net/
 
 ## Use Case
 
