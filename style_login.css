@@ -21,6 +21,8 @@ body {
   border-radius: 8px;
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
   width: 560px;
+  height: 450px;
+  padding-top: 40px;
   display: flex;
 }
 .login_image1{
@@ -60,6 +62,11 @@ body {
   display: block;
   margin-bottom: 0.5rem;
   color: #555;
+}
+#ResultDiv{
+  border: 2px solid black;
+  border: #0056b3;
+  padding-top: 20px
 }
 
 .input-group input {
