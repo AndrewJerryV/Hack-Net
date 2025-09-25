@@ -8,11 +8,50 @@ class ResumeAnalyzer {
         this.isLoading = false;
         // --- GEMINI API DETAILS ---
         // The execution environment will automatically provide it.
-        this.apiKey = "AIzaSyB9afRVbbNgRA-znv9XoLTXFT9DqPIXm1E";
+        this.apiKey = "AIzaSyA8fp_8Yvu9BW4NWZvRguTTQgCMjv4J5H8";
+        this.apiKeys = [
+            "AIzaSyB9afRVbbNgRA-znv9XoLTXFT9DqPIXm1E", // Your primary key
+            "AIzaSyA8fp_8Yvu9BW4NWZvRguTTQgCMjv4J5H8",    // A backup key
+        ];
+        this.currentApiKeyIndex = 0;
         this.apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${this.apiKey}`;
         // Bind methods and initialize
         this.handleAnalyzeClick = this.handleAnalyzeClick.bind(this);
         this.initializeEventListeners();
+    }
+
+    /**
+     * Makes an API call to the Gemini model, trying multiple API keys if necessary.
+     * @param {object} payload - The request body to send to the API.
+     * @returns {Promise<object>} - The JSON response from the API.
+     */
+    async makeApiCall(payload) {
+        // Reset to the first key for each new sequence of attempts.
+        this.currentApiKeyIndex = 0; 
+        while (this.currentApiKeyIndex < this.apiKeys.length) {
+            const currentKey = this.apiKeys[this.currentApiKeyIndex];
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${currentKey}`;
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    const errorBody = await response.json();
+                    console.log(`API key at index ${this.currentApiKeyIndex} failed with status ${response.status}:`, errorBody);
+                    // throw new Error(`API key at index ${this.currentApiKeyIndex} failed with status ${response.status}.`);
+                }
+                // If successful, return the result and exit the loop.
+                return await response.json(); 
+
+            } catch (error) {
+                console.warn(error.message); // Log the warning
+                this.currentApiKeyIndex++; // Move to the next key
+            }
+        }
+        // If the loop finishes, all keys have failed.
+        throw new Error(`API request failed with status ${response.status}. Please check the console for details.`);
     }
 
     /**
@@ -187,30 +226,18 @@ class ResumeAnalyzer {
         };
 
         try {
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!response.ok) {
-                const errorBody = await response.json();
-                console.error("API Error Response:", errorBody);
-                throw new Error(`API request failed with status ${response.status}. Please check the console for details.`);
-            }
-
-            const result = await response.json();
+            const result = await this.makeApiCall(payload);
 
             if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
                 const jsonText = result.candidates[0].content.parts[0].text;
                 return JSON.parse(jsonText);
             } else {
                 console.error("Invalid API response structure:", result);
-                throw new Error("Received an invalid response from the AI. It might be busy. Please try again.");
+                throw new Error("Received an invalid response from the AI. Please try again.");
             }
         } catch (error) {
-            console.error("Error calling Gemini API:", error);
-            throw error; // Re-throw to be caught by the caller
+            console.error("Error during AI analysis:", error);
+            throw error; // Re-throw to be caught by the calling function
         }
     }
 
@@ -666,8 +693,7 @@ class ResumeAnalyzer {
         const chatWindow = document.getElementById('chat-window');
         const chatForm = document.getElementById('chat-form');
         const chatInput = document.getElementById('chat-input');
-        const chatMessages = document.getElementById('chat-messages');
-
+        
         // Show chatbot after analysis
         chatbot.classList.remove('hidden');
 
@@ -688,6 +714,7 @@ class ResumeAnalyzer {
             // Add user message to chat
             this.addChatMessage(message, true);
             chatInput.value = '';
+            this.addChatLoader(); // Show loader
 
             // Create context-aware prompt
             const prompt = `
@@ -729,21 +756,96 @@ class ResumeAnalyzer {
 
                 const result = await response.json();
                 const answer = result.candidates[0].content.parts[0].text;
+                this.removeChatLoader(); // Remove loader
                 this.addChatMessage(answer, false);
             } catch (error) {
                 console.error('Chat error:', error);
+                this.removeChatLoader(); // Remove loader on error
                 this.addChatMessage('Sorry, I encountered an error. Please try again.', false);
             }
         });
+    }
+
+    /**
+     * Formats a bot's message from markdown-like text to HTML.
+     * @param {string} message - The raw text from the AI.
+     * @returns {string} - The formatted HTML string.
+     */
+    formatBotMessage(message) {
+        // Convert **text** to <strong>text</strong>
+        let formattedMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Process lines for bullet points and paragraphs
+        const lines = formattedMessage.split('\n');
+        let html = '';
+        let inList = false;
+
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith('* ')) {
+                if (!inList) {
+                    html += '<ul>';
+                    inList = true;
+                }
+                html += `<li>${trimmedLine.substring(2)}</li>`; // Add list item
+            } else {
+                if (inList) {
+                    html += '</ul>'; // Close the list
+                    inList = false;
+                }
+                if (trimmedLine) {
+                    html += `<p>${line}</p>`; // Wrap non-list, non-empty lines in paragraphs
+                }
+            }
+        }
+
+        if (inList) {
+            html += '</ul>'; // Ensure any open list is closed at the end
+        }
+
+        return html;
     }
 
     addChatMessage(message, isUser) {
         const chatMessages = document.getElementById('chat-messages');
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-        messageDiv.textContent = message;
+        if (isUser) {
+            messageDiv.textContent = message;
+        } else {
+            messageDiv.innerHTML = this.formatBotMessage(message);
+        }
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    /**
+     * Adds a loading indicator to the chat window.
+     */
+    addChatLoader() {
+        const chatMessages = document.getElementById('chat-messages');
+        const loaderDiv = document.createElement('div');
+        loaderDiv.id = 'chat-loader';
+        loaderDiv.className = 'message bot-message'; // Align to the left like bot messages
+        loaderDiv.innerHTML = `
+            <div class="flex items-center justify-center space-x-1.5 p-2">
+                <div class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
+                <div class="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style="animation-delay: 0.1s;"></div>
+                <div class="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style="animation-delay: 0.2s;"></div>
+            </div>
+        `;
+        chatMessages.appendChild(loaderDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    /**
+     * Removes the loading indicator from the chat window.
+     */
+    removeChatLoader() {
+        const loader = document.getElementById('chat-loader');
+        if (loader) {
+            loader.remove();
+        }
     }
 }
 
