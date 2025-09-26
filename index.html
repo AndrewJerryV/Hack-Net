@@ -3,36 +3,735 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login Page</title>
-  <link rel="stylesheet" href="style_login.css" />
+  <title>Login | AI Resume Analyzer</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" href="assets\favicon.ico" type="image/x-icon">
+  <style>
+    /* Modern CSS Reset and Variables - Light Theme */
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --secondary: #7c3aed;
+      --accent: #06d6a0;
+      --light: #ffffff;
+      --dark: #1e293b;
+      --gray: #64748b;
+      --light-gray: #f1f5f9;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --card-bg: rgba(255, 255, 255, 0.95);
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      --transition: all 0.3s ease;
+      --gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      --light-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--light-gradient);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+      color: var(--dark);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Animated Background Elements - Light Theme */
+    .background-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    .scan-line {
+      position: absolute;
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
+      opacity: 0.5;
+      z-index: 1;
+      animation: scan 8s linear infinite;
+    }
+
+    @keyframes scan {
+      0% { top: 0%; }
+      50% { top: 100%; }
+      100% { top: 0%; }
+    }
+
+    .floating-text {
+      position: absolute;
+      color: rgba(30, 41, 59, 0.15);
+      font-size: 18px;
+      font-weight: 600;
+      transition: all 3s ease;
+      z-index: 0;
+    }
+
+    .data-node {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: rgba(37, 99, 235, 0.3);
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+      z-index: 0;
+    }
+
+    .pulse {
+      animation: pulse 3s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.5); opacity: 0.3; }
+      100% { transform: scale(1); opacity: 0.7; }
+    }
+
+    .grid-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: 0;
+    }
+
+    /* Login Container */
+    .login-container {
+      display: flex;
+      max-width: 1000px;
+      width: 100%;
+      background: var(--card-bg);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.8s ease-out;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      position: relative;
+      z-index: 10;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .login-left {
+      flex: 1;
+      background: var(--gradient);
+      color: white;
+      padding: 50px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-left::before {
+      content: '';
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 L100,100 Z" fill="rgba(255,255,255,0.1)"/></svg>');
+      background-size: cover;
+      top: -50%;
+      left: -50%;
+      transform: rotate(15deg);
+      animation: float 15s infinite linear;
+    }
+
+    @keyframes float {
+      0% { transform: rotate(15deg) translate(0, 0); }
+      50% { transform: rotate(15deg) translate(-10px, 10px); }
+      100% { transform: rotate(15deg) translate(0, 0); }
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      margin-bottom: 30px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+      font-size: 20px;
+    }
+
+    .logo-text {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .ai-elements {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .ai-node {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .login-left h1 {
+      font-size: 32px;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-left p {
+      font-size: 16px;
+      opacity: 0.9;
+      max-width: 350px;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 30px;
+    }
+
+    .features {
+      list-style: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    .features li {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+    }
+
+    .features i {
+      margin-right: 10px;
+      color: var(--accent);
+      font-size: 18px;
+    }
+
+    .login-right {
+      flex: 1;
+      padding: 50px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background: var(--light);
+    }
+
+    .login-right h2 {
+      font-size: 28px;
+      color: var(--dark);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .login-right p {
+      color: var(--gray);
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--dark);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 15px 15px 15px 45px;
+      border: 2px solid rgba(226, 232, 240, 0.8);
+      border-radius: 10px;
+      font-size: 16px;
+      transition: var(--transition);
+      background-color: var(--light-gray);
+      color: var(--dark);
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background-color: white;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .input-group input::placeholder {
+      color: rgba(100, 116, 139, 0.6);
+    }
+
+    .input-group i {
+      position: absolute;
+      left: 15px;
+      top: 42px;
+      color: var(--gray);
+      font-size: 18px;
+    }
+
+    .options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+
+    .remember {
+      display: flex;
+      align-items: center;
+      color: var(--gray);
+    }
+
+    .remember input {
+      margin-right: 8px;
+    }
+
+    .forgot-password {
+      color: var(--primary);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .forgot-password:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    .button_login {
+      width: 100%;
+      padding: 15px;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .button_login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+    }
+
+    .button_login:active {
+      transform: translateY(0);
+    }
+
+    .button_login::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: 0.5s;
+    }
+
+    .button_login:hover::after {
+      left: 100%;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: var(--gray);
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(226, 232, 240, 0.8);
+    }
+
+    .divider span {
+      padding: 0 15px;
+      font-size: 14px;
+    }
+
+    .linkedin {
+      width: 100%;
+      padding: 12px;
+      background: #0077b5;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .linkedin:hover {
+      background: #006097;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 10px rgba(0, 119, 181, 0.3);
+    }
+
+    .linkedin a {
+      color: white;
+      text-decoration: none;
+    }
+
+    #ResultDiv {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 500;
+      transition: var(--transition);
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .signup-link {
+      text-align: center;
+      margin-top: 25px;
+      font-size: 14px;
+      color: var(--gray);
+    }
+
+    .signup-link a {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .signup-link a:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
+    /* Text scanning effect */
+    .scanned {
+      color: var(--primary) !important;
+      text-shadow: 0 0 10px rgba(37, 99, 235, 0.3);
+      transition: all 0.5s ease;
+    }
+
+    /* Loading animation */
+    .loading-dots {
+      display: inline-block;
+      position: relative;
+      width: 80px;
+      height: 20px;
+    }
+
+    .loading-dots div {
+      position: absolute;
+      top: 8px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation-timing-function: cubic-bezier(0, 1, 1, 0);
+    }
+
+    .loading-dots div:nth-child(1) {
+      left: 8px;
+      animation: loading-dots1 0.6s infinite;
+    }
+
+    .loading-dots div:nth-child(2) {
+      left: 8px;
+      animation: loading-dots2 0.6s infinite;
+    }
+
+    .loading-dots div:nth-child(3) {
+      left: 32px;
+      animation: loading-dots2 0.6s infinite;
+    }
+
+    .loading-dots div:nth-child(4) {
+      left: 56px;
+      animation: loading-dots3 0.6s infinite;
+    }
+
+    @keyframes loading-dots1 {
+      0% { transform: scale(0); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes loading-dots3 {
+      0% { transform: scale(1); }
+      100% { transform: scale(0); }
+    }
+
+    @keyframes loading-dots2 {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(24px, 0); }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .login-container {
+        flex-direction: column;
+        max-width: 450px;
+      }
+      
+      .login-left {
+        padding: 30px 20px;
+      }
+      
+      .login-right {
+        padding: 30px 20px;
+      }
+      
+      .login-left h1 {
+        font-size: 24px;
+      }
+      
+      .floating-text {
+        font-size: 14px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="login-container">
-    <div class="login_image">
-      <img class="login_image1" src="login.png" alt="hello">
-    </div>
-    <div class="vertical-line"></div>
-    <div class="login_right">
+  <!-- Animated Background -->
+  <div class="background-container">
+    <div class="grid-lines"></div>
+    <div class="scan-line"></div>
+    <!-- Floating text elements will be added by JavaScript -->
+  </div>
 
-      <div class="login_field">
-        <h2>Login</h2>
-        <form id="form1">
-          <div class="input-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" placeholder="Enter username" required />
-          </div>
-          <div class="input-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password" placeholder="Enter password" required />
-          </div>
-          <button type="submit" class="button_login" id="login1">Login</button>
-          <div id="ResultDiv"></div>
-        </form>
-        <button class="linkedin"><i class="fa-brands fa-linkedin"></i><a href="https://www.linkedin.com/login">Connect with LinkedIn</a></button>
+  <!-- Login Container -->
+  <div class="login-container">
+    <div class="login-left">
+      <div class="ai-elements" id="aiElements"></div>
+      
+      <div class="logo">
+        <div class="logo-icon">
+          <img src="https://img.icons8.com/ios-filled/50/ffffff/resume.png" alt="Logo" width="24" height="24"/>
+        </div>
+        <div class="logo-text">Resume Customization AI</div>
       </div>
+      
+      <p>Get intelligent feedback on your resume with our advanced AI technology. Improve your chances of landing your dream job.</p>
+      
+      <ul class="features">
+        <li><i class="fas fa-check-circle"></i> Instant resume scoring</li>
+        <li><i class="fas fa-check-circle"></i> Keyword optimization</li>
+        <li><i class="fas fa-check-circle"></i> ATS compatibility check</li>
+        <li><i class="fas fa-check-circle"></i> Personalized improvement suggestions</li>
+      </ul>
+    </div>
+    
+    <div class="login-right">
+      <h2>Login to ResumeAI</h2>
+      <p>Enter your credentials to access your dashboard</p>
+      
+      <form id="form1">
+        <div class="input-group">
+          <label for="username">Username</label>
+          <i class="fas fa-user"></i>
+          <input type="text" id="username" name="username" placeholder="Enter username" required />
+        </div>
         
+        <div class="input-group">
+          <label for="password">Password</label>
+          <i class="fas fa-lock"></i>
+          <input type="password" id="password" name="password" placeholder="Enter password" required />
+        </div>
+        
+        <div class="options">
+          <div class="remember">
+            <input type="checkbox" id="remember">
+            <label for="remember">Remember me</label>
+          </div>
+          <a href="#" class="forgot-password">Forgot password?</a>
+        </div>
+        
+        <button type="submit" class="button_login" id="login1">
+          <i class="fas fa-sign-in-alt"></i> Login
+        </button>
+        <div id="ResultDiv"></div>
+      </form>
+      
+      <div class="divider"><span>OR</span></div>
+      
+      <button class="linkedin">
+        <i class="fab fa-linkedin"></i>
+        <a href="https://www.linkedin.com/login">Connect with LinkedIn</a>
+      </button>
+      
+      <div class="signup-link">
+        Don't have an account? <a href="#">Sign up now</a>
+      </div>
     </div>
   </div>
-  <script src="login.js"></script>
+
+  <script>
+
+    // Create AI-themed floating nodes
+    const aiElements = document.getElementById('aiElements');
+    for (let i = 0; i < 15; i++) {
+      const node = document.createElement('div');
+      node.classList.add('ai-node');
+      node.style.left = `${Math.random() * 100}%`;
+      node.style.top = `${Math.random() * 100}%`;
+      node.style.animationDelay = `${Math.random() * 2}s`;
+      aiElements.appendChild(node);
+    }
+
+    // Create floating data nodes in background
+    const backgroundContainer = document.querySelector('.background-container');
+    for (let i = 0; i < 30; i++) {
+      const node = document.createElement('div');
+      node.classList.add('data-node');
+      if (Math.random() > 0.5) node.classList.add('pulse');
+      node.style.left = `${Math.random() * 100}%`;
+      node.style.top = `${Math.random() * 100}%`;
+      node.style.animationDelay = `${Math.random() * 3}s`;
+      backgroundContainer.appendChild(node);
+    }
+
+    // Scanning effect for keywords
+    const scanLine = document.querySelector('.scan-line');
+    const floatingTexts = document.querySelectorAll('.floating-text');
+    
+    function checkScanPosition() {
+      const scanTop = parseFloat(scanLine.style.top) || 0;
+      
+      floatingTexts.forEach(text => {
+        const textTop = parseFloat(text.style.top) || 0;
+        const textHeight = 30; // Approximate height of text
+        
+        // If scan line is within text area, highlight it
+        if (scanTop >= textTop && scanTop <= textTop + textHeight) {
+          text.classList.add('scanned');
+          // Remove the highlight after a delay
+          setTimeout(() => {
+            text.classList.remove('scanned');
+          }, 1000);
+        }
+      });
+      
+      requestAnimationFrame(checkScanPosition);
+    }
+    
+    // Start the scanning detection
+    checkScanPosition();
+
+    // Login functionality from login.js
+    const jsonFilePath = 'user.json';
+    const loginForm = document.getElementById('form1');
+    const resultDiv = document.getElementById('ResultDiv');
+
+    loginForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const usernameInput = document.getElementById('username').value.trim();
+      const passwordInput = document.getElementById('password').value;
+
+      if (!usernameInput || !passwordInput) {
+        resultDiv.innerHTML = `<p style="color: var(--warning);"><i class="fas fa-exclamation-triangle"></i> Please enter both username and password.</p>`;
+        resultDiv.style.backgroundColor = 'rgba(245, 158, 11, 0.1)';
+        return;
+      }
+
+      // Show loading state
+      resultDiv.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center;">
+          <i class="fas fa-robot" style="margin-right: 10px;"></i>
+          <span>AI authentication in progress</span>
+          <div class="loading-dots" style="margin-left: 10px;">
+            <div></div>
+            <div></div>
+            <div></div>
+            <div></div>
+          </div>
+        </div>`;
+      resultDiv.style.backgroundColor = 'rgba(37, 99, 235, 0.1)';
+
+      fetch(jsonFilePath)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Failed to fetch data: ${response.statusText}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          const userFound = data.users.find(user =>
+            user.username === usernameInput && user.password === passwordInput
+          );
+
+          if (userFound) {
+            resultDiv.innerHTML = `<p style="color: var(--success);"><i class="fas fa-check-circle"></i> Login successful! Welcome, ${userFound.username}.</p>`;
+            resultDiv.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+            setTimeout(() => {
+              window.location.href = 'homepage.html'; // Replace with your target page
+            }, 2000);
+          } else {
+            resultDiv.innerHTML = `<p style="color: var(--error);"><i class="fas fa-exclamation-circle"></i> Invalid username or password.</p>`;
+            resultDiv.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          resultDiv.innerHTML = `<p style="color: var(--error);"><i class="fas fa-exclamation-circle"></i> An error occurred while fetching user data.</p>`;
+          resultDiv.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+        });
+    });
+  </script>
 </body>
 </html>
