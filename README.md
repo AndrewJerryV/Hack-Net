@@ -60,4 +60,16 @@ Allows Export to PDF and Word
 
 After customization, the user can download the resume in their preferred format.
 
+## Deployment Note
+
+The analyzer now runs fully in-browser using ONNX models via `@huggingface/transformers`.
+
+- ATS semantic matching model: `onnx-community/all-MiniLM-L6-v2-ONNX`
+- Enhanced resume generation is currently template-guided (section-based) and filled using lightweight local extraction and semantic relevance signals.
+- The active flow does not require loading a large generative model.
+- First analysis downloads model files in the browser and then uses browser cache for faster reuse.
+- No Gemini or external paid LLM API calls are required.
+- No API key or secret injection is needed for deployment.
+- Compatible with static hosting platforms like GitHub Pages and Vercel.
+
 

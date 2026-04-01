@@ -18,10 +18,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Inject Gemini API Key into JS
-        run: |
-          find . -type f -name "*.js" -exec sed -i "s|GEMINI_KEY_PLACEHOLDER|${{ secrets.GEMINI_API_KEY }}|g" {} +
-
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:
