@@ -99,6 +99,21 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
         this.initializeEventListeners();
         this.applySampleInputs();
         this.setStatus('Sample resume and job description loaded. Edit them and click Analyze & Customize.', 'info');
+        this.startBackgroundModelPreload();
+    }
+
+    startBackgroundModelPreload() {
+        try {
+            if (window.location.protocol === 'file:') return;
+        } catch (_) { return; }
+        setTimeout(() => {
+            this.addRuntimeEvent('Pre-loading MiniLM model in background for faster first analysis...', 'info');
+            this.getEmbeddingExtractor()
+                .then(() => {
+                    this.addRuntimeEvent('MiniLM model cached and ready. Analysis will start immediately on next click.', 'success');
+                })
+                .catch(() => {});
+        }, 100);
     }
 
     setStatus(message, type = 'info') {
@@ -164,10 +179,6 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
             return `<div class="${cls}">[${event.timestamp}] ${event.message}</div>`;
         }).join('');
         logEl.scrollTop = logEl.scrollHeight;
-
-        if (detailsEl && !detailsEl.open) {
-            detailsEl.open = true;
-        }
     }
 
     startLoadMonitor(label) {
@@ -204,6 +215,7 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
         this.lastProgressUpdateAt = now;
 
         const status = progress.status || 'loading';
+        const isFromCache = status === 'cache' || progress.cached === true;
         const file = progress.file || progress.name || 'model file';
         const loaded = typeof progress.loaded === 'number' ? progress.loaded : null;
         const total = typeof progress.total === 'number' ? progress.total : null;
@@ -214,12 +226,14 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
             ? Math.round(percentValue * 10) / 10
             : null;
 
+        const label = isFromCache ? 'Loaded from cache' : status;
         const details = percent !== null
-            ? `${status}: ${file} (${percent.toFixed(1)}%)`
-            : `${status}: ${file}`;
+            ? `${label}: ${file} (${percent.toFixed(1)}%)`
+            : `${label}: ${file}`;
 
         this.setLoadingMessage(`${contextLabel} ${details}`);
-        this.addRuntimeEvent(`${contextLabel} ${details}`, 'info');
+        const eventLevel = isFromCache ? 'success' : 'info';
+        this.addRuntimeEvent(`${contextLabel} ${details}`, eventLevel);
     }
 
     applySampleInputs() {
@@ -274,33 +288,26 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
             env.allowLocalModels = false;
             env.allowRemoteModels = true;
 
-            const persistentCacheName = 'resume-ai-transformers-cache-v1';
-            const hasCacheApi = typeof globalThis !== 'undefined'
-                && !!globalThis.caches
-                && typeof globalThis.caches.open === 'function';
-
-            let hasPersistentCache = false;
-            if (hasCacheApi) {
-                try {
-                    const customCache = await globalThis.caches.open(persistentCacheName);
-                    const existingEntries = await customCache.keys();
-                    env.useCustomCache = true;
-                    env.customCache = customCache;
-                    env.useBrowserCache = true;
-                    env.cacheKey = persistentCacheName;
-                    env.useWasmCache = true;
-                    hasPersistentCache = true;
-                    this.addRuntimeEvent(`Persistent browser model cache enabled (${existingEntries.length} cached files found).`, 'info');
-                } catch (error) {
-                    hasPersistentCache = false;
+            let cacheAvailable = false;
+            try {
+                if (typeof globalThis !== 'undefined'
+                    && globalThis.caches
+                    && typeof globalThis.caches.open === 'function'
+                    && globalThis.location
+                    && globalThis.location.protocol !== 'file:') {
+                    await globalThis.caches.open('__transformers_cache_test__');
+                    await globalThis.caches.delete('__transformers_cache_test__');
+                    cacheAvailable = true;
                 }
+            } catch (_err) {
+                cacheAvailable = false;
             }
-
-            if (!hasPersistentCache) {
-                env.useCustomCache = false;
-                env.customCache = null;
+            if (cacheAvailable) {
+                env.useBrowserCache = true;
+                this.addRuntimeEvent('Browser model cache enabled. Models will persist across sessions.', 'info');
+            } else {
                 env.useBrowserCache = false;
-                this.addRuntimeEvent('Persistent browser cache is unavailable. Models may download again in future sessions.', 'warning');
+                this.addRuntimeEvent('Browser Cache API unavailable (or restricted context). Models will download each session.', 'warning');
             }
 
             if (env.backends && env.backends.onnx && env.backends.onnx.wasm) {
@@ -333,8 +340,8 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
                     throw new Error('This app must be opened via http(s), not file://. Use GitHub Pages, Vercel, or a local web server.');
                 }
 
-                this.setLoadingMessage('Loading sentence-embedding model files for local inference...');
-                this.setStatus('Loading local sentence model. First run may take longer depending on network speed.', 'info');
+                this.setLoadingMessage('Loading sentence-embedding model (using browser cache if available)...');
+                this.setStatus('Loading local sentence model. Cached across sessions via browser Cache API.', 'info');
                 this.addRuntimeEvent('Starting sentence embedding model load (MiniLM).', 'info');
                 this.startLoadMonitor('Sentence model load');
 
@@ -1085,23 +1092,53 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
      */
     handleFileUpload(event) {
         const file = event.target.files[0];
-        if (file && file.type === 'text/plain') {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.resumeText = e.target.result;
-                document.getElementById('resume-text').value = this.resumeText;
-                this.updateAnalyzeButtonState();
-                this.setStatus('Resume text file loaded successfully.', 'success');
-            };
-            reader.onerror = () => {
-                this.setStatus('Could not read the selected file.', 'error');
-                this.showErrorModal(true, 'Could not read the selected file. Please try again.');
-            };
-            reader.readAsText(file);
-        } else if (file) {
-            this.setStatus('Unsupported file type. Please upload a plain .txt resume.', 'warning');
-            this.showErrorModal(true, "Please upload a .txt file.");
-        }
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            let text = e.target.result;
+            const name = file.name.toLowerCase();
+
+            if (name.endsWith('.pdf')) {
+                text = this.extractTextFromPDF(text);
+            } else if (name.endsWith('.docx')) {
+                try {
+                    text = this.extractTextFromDocx(text);
+                } catch (_) {
+                    text = text.replace(/[^\x20-\x7E\n]/g, ' ').replace(/\s+/g, ' ').trim();
+                }
+            } else if (name.endsWith('.doc')) {
+                text = text.replace(/[^\x20-\x7E\n]/g, ' ').replace(/\s+/g, ' ').trim();
+            }
+
+            this.resumeText = text;
+            document.getElementById('resume-text').value = text;
+            this.updateAnalyzeButtonState();
+            this.setStatus(`Loaded ${file.name} — text extracted. Please review and edit if needed.`, 'success');
+        };
+        reader.onerror = () => {
+            this.setStatus('Could not read the selected file.', 'error');
+        };
+        reader.readAsText(file);
+    }
+
+    extractTextFromPDF(raw) {
+        const cleaned = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+        const lines = cleaned.split(/\r?\n/).filter(Boolean);
+        const filtered = lines.filter(line => {
+            const s = line.trim();
+            if (!s || s.length < 3) return false;
+            if (/^[\s!-/:-@\[-`{-~]+$/.test(s)) return false;
+            if (/^\d+\s*\d*\s*$/.test(s)) return false;
+            return true;
+        });
+        return filtered.join('\n').trim() || cleaned.replace(/[^\x20-\x7E\n]/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    extractTextFromDocx(raw) {
+        const text = raw.replace(/[^\x20-\x7E\n]/g, ' ').replace(/\s+/g, ' ').trim();
+        const lines = text.split(/\s{3,}/).filter(Boolean);
+        return lines.length > 3 ? lines.join('\n') : text;
     }
 
     /**
@@ -1109,6 +1146,7 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
      */
     updateAnalyzeButtonState() {
         const analyzeBtn = document.getElementById('analyze-btn');
+        if (!analyzeBtn) return;
         const hasContent = this.resumeText.trim() && this.jobDescription.trim();
         analyzeBtn.disabled = !hasContent || this.isLoading;
     }
@@ -1119,8 +1157,10 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
      */
     setLoadingState(isLoading) {
         this.isLoading = isLoading;
-        document.getElementById('loading').classList.toggle('hidden', !isLoading);
-        document.getElementById('analyze-btn').classList.toggle('hidden', isLoading);
+        const loadingEl = document.getElementById('loading');
+        const btnEl = document.getElementById('analyze-btn');
+        if (loadingEl) loadingEl.classList.toggle('hidden', !isLoading);
+        if (btnEl) btnEl.classList.toggle('hidden', isLoading);
         if (!isLoading) {
             this.stopLoadMonitor();
             this.setLoadingMessage('MiniLM runs fully in-browser for ATS matching and template-guided resume enhancement.');
@@ -1246,37 +1286,48 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
             message = `Your resume needs work to pass ATS filters. Focus on the suggestions provided.`;
         }
         ringElement.className.baseVal = colorClass;
-        scoreElement.className = `absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-4xl font-bold ${colorClass}`;
+        scoreElement.className = `absolute inset-0 flex items-center justify-center text-3xl font-bold tracking-tight ${colorClass}`;
         labelElement.textContent = label;
-        labelElement.className = `mt-4 text-lg font-medium ${colorClass}`;
+        labelElement.className = `mt-2.5 text-xs font-semibold text-center uppercase tracking-wider ${colorClass}`;
         messageElement.textContent = message;
+
+        const statsEl = document.getElementById('analysis-stats');
+        if (statsEl) {
+            const setStat = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setStat('stat-matched', this.analysis.matchedKeywords.length);
+            setStat('stat-missing', this.analysis.missingKeywords.length);
+            setStat('stat-gaps', this.analysis.skillGaps.length);
+            statsEl.classList.remove('hidden');
+        }
     }
 
     displayKeywords() {
-        const createKeywordBadge = (keyword, type) => {
-            const color = type === 'matched'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-red-100 text-red-800';
-            return `<span class="py-1 px-3 rounded-full text-sm font-medium ${color}">${keyword}</span>`;
+        const createKeywordBadge = (keyword, type, index) => {
+            const colors = type === 'matched'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50'
+                : 'bg-red-50 text-red-600 border-red-200/50';
+            return `<span class="py-1.5 px-3.5 rounded-full text-sm font-medium border ${colors}" style="animation:fadeIn 0.25s ease-out ${index * 0.04}s both">${keyword}</span>`;
         };
 
-        document.getElementById('matched-keywords').innerHTML = this.analysis.matchedKeywords.map(k => createKeywordBadge(k, 'matched')).join('');
-        document.getElementById('missing-keywords').innerHTML = this.analysis.missingKeywords.map(k => createKeywordBadge(k, 'missing')).join('');
+        document.getElementById('matched-keywords').innerHTML = this.analysis.matchedKeywords.map((k, i) => createKeywordBadge(k, 'matched', i)).join('');
+        document.getElementById('missing-keywords').innerHTML = this.analysis.missingKeywords.map((k, i) => createKeywordBadge(k, 'missing', i)).join('');
     }
 
     displaySuggestions() {
-        document.getElementById('suggestions-list').innerHTML = this.analysis.suggestions.map(s => `
-            <div class="flex items-start p-4 bg-blue-50 rounded-lg">
-                <i class="fas fa-lightbulb text-blue-500 text-xl mt-1 mr-4"></i>
-                <p class="text-gray-700">${s}</p>
+        document.getElementById('suggestions-list').innerHTML = this.analysis.suggestions.map((s, i) => `
+            <div class="flex items-start p-4 bg-blue-50/80 rounded-xl border border-blue-100/50" style="animation:fadeIn 0.3s ease-out ${i * 0.08}s both">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+                    <i class="fas fa-lightbulb text-blue-600 text-sm"></i>
+                </div>
+                <p class="text-gray-700 text-sm ml-3 leading-relaxed">${s}</p>
             </div>
         `).join('');
     }
 
     displaySkillGaps() {
-        document.getElementById('skill-gaps').innerHTML = this.analysis.skillGaps.map(skill => `
-            <span class="py-1.5 px-4 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800 flex items-center">
-                <i class="fas fa-exclamation-triangle mr-2"></i>${skill}
+        document.getElementById('skill-gaps').innerHTML = this.analysis.skillGaps.map((skill, i) => `
+            <span class="py-1.5 px-4 rounded-full text-sm font-medium bg-amber-50 text-amber-700 flex items-center border border-amber-200/50" style="animation:fadeIn 0.25s ease-out ${i * 0.05}s both">
+                <i class="fas fa-exclamation-triangle text-amber-400 mr-2 text-xs"></i>${skill}
             </span>
         `).join('');
     }
@@ -1452,6 +1503,9 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
 
         parts.push('</article>');
         container.innerHTML = parts.join('');
+        container.style.animation = 'none';
+        void container.offsetHeight;
+        container.style.animation = 'fadeIn 0.4s ease-out';
     }
 
     /**
@@ -1473,8 +1527,10 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
      */
     showErrorModal(show, message = "An unexpected error occurred.") {
         const modal = document.getElementById('error-modal');
+        const msgEl = document.getElementById('error-message');
+        if (!modal) return;
         if (show) {
-            document.getElementById('error-message').textContent = message;
+            if (msgEl) msgEl.textContent = message;
             modal.classList.remove('hidden');
         } else {
             modal.classList.add('hidden');
@@ -1597,224 +1653,175 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
         const { jsPDF } = window.jspdf;
         const resume = this.analysis.enhancedResume;
         const doc = new jsPDF('p', 'pt', 'a4');
-        const margin = 44;
+        const margin = 50;
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         const contentWidth = pageWidth - margin * 2;
-        const lineHeight = 15;
-        let y = 54;
+        let y = 48;
 
-        const ensurePageSpace = (spaceNeeded) => {
-            if (y + spaceNeeded > pageHeight - margin) {
-                doc.addPage();
-                y = 54;
-            }
-        };
+        const addPage = () => { doc.addPage(); y = 48; };
+        const spaceLeft = () => pageHeight - margin - y;
 
-        const writeWrapped = (text, options = {}) => {
-            const {
-                x = margin,
-                width = contentWidth,
-                align = 'left',
-                font = 'times',
-                style = 'normal',
-                size = 11,
-                color = '#1F2937',
-                lineGap = lineHeight
-            } = options;
-
-            const value = String(text || '').trim();
-            if (!value) return 0;
-
-            doc.setFont(font, style);
+        const write = (text, x, width, size, style, color) => {
+            doc.setFont('helvetica', style);
             doc.setFontSize(size);
             doc.setTextColor(color);
-
-            const lines = doc.splitTextToSize(value, width);
-            const blockHeight = lines.length * lineGap;
-            ensurePageSpace(blockHeight + 6);
-
-            if (align === 'center') {
-                doc.text(lines, pageWidth / 2, y, { align: 'center' });
-            } else {
-                doc.text(lines, x, y);
-            }
-
-            y += blockHeight;
-            return blockHeight;
+            const lines = doc.splitTextToSize(String(text || '').trim(), width);
+            if (y + lines.length * (size * 1.35) > pageHeight - margin) addPage();
+            doc.text(lines, x, y);
+            y += lines.length * (size * 1.35);
         };
 
-        const writeHeaderRow = (text, options = {}) => {
-            const {
-                font = 'times',
-                style = 'bold',
-                size = 11,
-                color = '#111111',
-                lineGap = 14
-            } = options;
-
-            const row = this.splitHeaderRow(text);
-            const leftText = String(row.left || '').trim();
-            const rightText = String(row.right || '').trim();
-            if (!leftText && !rightText) return;
-
-            doc.setFont(font, style);
+        const writeBullet = (text, x, width, size) => {
+            doc.setFont('helvetica', 'normal');
             doc.setFontSize(size);
-            doc.setTextColor(color);
-
-            const maxRightWidth = 170;
-            const measuredRightWidth = rightText ? Math.ceil(doc.getTextWidth(rightText) + 4) : 0;
-            const rightWidth = rightText ? Math.min(maxRightWidth, measuredRightWidth) : 0;
-            const leftWidth = contentWidth - rightWidth - (rightText ? 14 : 0);
-
-            const leftLines = leftText ? doc.splitTextToSize(leftText, leftWidth) : [''];
-            const rightLines = rightText ? doc.splitTextToSize(rightText, rightWidth) : [];
-            const rows = Math.max(leftLines.length, rightLines.length || 1);
-            const blockHeight = rows * lineGap;
-
-            ensurePageSpace(blockHeight + 4);
-            doc.text(leftLines, margin, y);
-            if (rightLines.length) {
-                doc.text(rightLines, pageWidth - margin, y, { align: 'right' });
-            }
-            y += blockHeight;
+            doc.setTextColor('#374151');
+            const indent = 12;
+            const bulletWidth = width - indent;
+            const lines = doc.splitTextToSize(String(text || '').trim(), bulletWidth);
+            const lineH = size * 1.35;
+            if (y + lines.length * lineH > pageHeight - margin) addPage();
+            doc.text('•', x, y);
+            doc.text(lines, x + indent, y);
+            y += lines.length * lineH;
         };
 
-        writeWrapped(resume.name || 'Candidate Name', {
-            align: 'center',
-            font: 'times',
-            style: 'bold',
-            size: 20,
-            color: '#111111',
-            lineGap: 22
-        });
-        y += 2;
+        // Name
+        write(resume.name || 'Candidate Name', margin, contentWidth, 18, 'bold', '#1f2937');
+        y += 4;
 
-        writeWrapped((resume.contact || []).join(' | '), {
-            align: 'center',
-            font: 'times',
-            style: 'normal',
-            size: 10.5,
-            color: '#222222',
-            width: contentWidth - 10,
-            lineGap: 12
-        });
+        // Contact — two columns like HTML display
+        const contactCols = this.getContactColumns(resume.contact || []);
+        if (contactCols.left.length || contactCols.right.length) {
+            const halfW = contentWidth / 2 - 6;
+            const both = [contactCols.left, contactCols.right];
+            const maxLines = Math.max(contactCols.left.length, contactCols.right.length);
+            const lineH = 10 * 1.3;
+            const blockH = maxLines * lineH;
+            if (y + blockH > pageHeight - margin) addPage();
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor('#4b5563');
+            contactCols.left.forEach((line, i) => doc.text(line, margin, y + i * lineH));
+            contactCols.right.forEach((line, i) => doc.text(line, pageWidth - margin, y + i * lineH, { align: 'right' }));
+            y += blockH + 6;
+        }
 
-        y += 7;
-        doc.setDrawColor('#222222');
-        doc.setLineWidth(1);
+        // Horizontal rule
+        if (y + 4 > pageHeight - margin) addPage();
+        doc.setDrawColor('#d1d5db');
+        doc.setLineWidth(0.5);
         doc.line(margin, y, pageWidth - margin, y);
-        y += 13;
+        y += 10;
 
-        writeWrapped(resume.summary || '', {
-            font: 'times',
-            style: 'normal',
-            size: 11,
-            color: '#111111',
-            lineGap: 14
-        });
+        // Summary
+        if (resume.summary) {
+            write(resume.summary, margin, contentWidth, 10, 'normal', '#374151');
+            y += 4;
+        }
 
+        // Sections
         const sections = Array.isArray(resume.sections) ? resume.sections : [];
         sections.forEach(section => {
             const displayTitle = this.getDisplaySectionTitle(section.title || '');
-            y += 8;
-            ensurePageSpace(36);
+            if (y + 30 > pageHeight - margin) addPage();
+            y += 6;
 
-            writeWrapped(displayTitle, {
-                font: 'times',
-                style: 'bold',
-                size: 12,
-                color: '#111111',
-                lineGap: 14
-            });
+            // Section title
+            write(displayTitle, margin, contentWidth, 11, 'bold', '#1f2937');
 
-            doc.setDrawColor('#222222');
-            doc.setLineWidth(0.8);
-            doc.line(margin, y + 3, pageWidth - margin, y + 3);
-            y += 13;
+            // Underline
+            doc.setDrawColor('#9ca3af');
+            doc.setLineWidth(0.4);
+            doc.line(margin, y + 1, pageWidth - margin, y + 1);
+            y += 6;
 
             const items = Array.isArray(section.items) ? section.items : [];
             items.forEach(item => {
+                // Header row (left + right aligned)
                 if (item.header) {
-                    const pointsCount = Array.isArray(item.points) ? item.points.length : 0;
-                    const estimate = 28 + (item.subheader ? 16 : 0) + (pointsCount > 0 ? 14 : 0);
-                    ensurePageSpace(estimate);
-                    writeHeaderRow(item.header, {
-                        font: 'times',
-                        style: 'bold',
-                        size: 11,
-                        color: '#111111',
-                        lineGap: 14
-                    });
+                    const row = this.splitHeaderRow(item.header);
+                    const left = String(row.left || item.header || '').trim();
+                    const right = String(row.right || '').trim();
+                    if (left || right) {
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(10);
+                        doc.setTextColor('#1f2937');
+                        const rightW = right ? Math.min(160, doc.getTextWidth(right) + 4) : 0;
+                        const leftW = contentWidth - rightW - (right ? 8 : 0);
+                        const leftLines = left ? doc.splitTextToSize(left, leftW) : [];
+                        const rightLines = right ? doc.splitTextToSize(right, rightW) : [];
+                        const rows = Math.max(leftLines.length, rightLines.length || 1);
+                        const lineH = 10 * 1.35;
+                        if (y + rows * lineH > pageHeight - margin) addPage();
+                        if (leftLines.length) doc.text(leftLines, margin, y);
+                        if (rightLines.length) doc.text(rightLines, pageWidth - margin, y, { align: 'right' });
+                        y += rows * lineH;
+                    }
                 }
 
+                // Subheader
                 if (item.subheader) {
-                    writeHeaderRow(item.subheader, {
-                        font: 'times',
-                        style: 'italic',
-                        size: 10,
-                        color: '#222222',
-                        lineGap: 12
-                    });
+                    const subRow = this.splitHeaderRow(item.subheader);
+                    const subLeft = String(subRow.left || item.subheader || '').trim();
+                    const subRight = String(subRow.right || '').trim();
+                    if (subLeft || subRight) {
+                        doc.setFont('helvetica', 'italic');
+                        doc.setFontSize(9);
+                        doc.setTextColor('#4b5563');
+                        const rightW = subRight ? Math.min(160, doc.getTextWidth(subRight) + 4) : 0;
+                        const leftW = contentWidth - rightW - (subRight ? 8 : 0);
+                        const leftLines = subLeft ? doc.splitTextToSize(subLeft, leftW) : [];
+                        const rightLines = subRight ? doc.splitTextToSize(subRight, rightW) : [];
+                        const rows = Math.max(leftLines.length, rightLines.length || 1);
+                        const lineH = 9 * 1.35;
+                        if (y + rows * lineH > pageHeight - margin) addPage();
+                        if (leftLines.length) doc.text(leftLines, margin, y);
+                        if (rightLines.length) doc.text(rightLines, pageWidth - margin, y, { align: 'right' });
+                        y += rows * lineH;
+                    }
                 }
 
-                const points = Array.isArray(item.points) ? item.points : [];
-                const useTwoColumnSkills = /skills/i.test(displayTitle) && points.length >= 8;
-                if (useTwoColumnSkills) {
-                    const middle = Math.ceil(points.length / 2);
-                    const leftPoints = points.slice(0, middle);
-                    const rightPoints = points.slice(middle);
-                    const columnGap = 24;
-                    const columnWidth = (contentWidth - columnGap) / 2;
-
-                    const estimateColumnHeight = (columnPoints) => columnPoints.reduce((acc, point) => {
-                        const wrapped = doc.splitTextToSize(String(point || '').trim(), columnWidth - 16);
-                        return acc + (wrapped.length * 14);
-                    }, 0);
-
-                    const leftHeight = estimateColumnHeight(leftPoints);
-                    const rightHeight = estimateColumnHeight(rightPoints);
-                    const blockHeight = Math.max(leftHeight, rightHeight);
-                    ensurePageSpace(blockHeight + 6);
-
-                    const startY = y;
-                    const renderColumn = (columnPoints, startX) => {
-                        let colY = startY;
-                        columnPoints.forEach(point => {
-                            const bulletText = String(point || '').trim();
-                            if (!bulletText) return;
-
-                            const wrapped = doc.splitTextToSize(bulletText, columnWidth - 16);
-                            doc.setFont('times', 'normal');
-                            doc.setFontSize(11);
-                            doc.setTextColor('#111111');
-                            doc.text('•', startX + 2, colY);
-                            doc.text(wrapped, startX + 14, colY);
-                            colY += wrapped.length * 14;
+                // Bullet points
+                const points = Array.isArray(item.points) ? item.points.filter(Boolean) : [];
+                const isSkills = /skills/i.test(displayTitle);
+                if (isSkills && points.length >= 8) {
+                    const mid = Math.ceil(points.length / 2);
+                    const cols = [points.slice(0, mid), points.slice(mid)];
+                    const colW = (contentWidth - 12) / 2;
+                    const lineH = 9 * 1.3;
+                    let maxH = 0;
+                    cols.forEach(col => {
+                        let h = 0;
+                        col.forEach(p => {
+                            p = String(p || '').trim();
+                            if (!p) return;
+                            const lines = doc.splitTextToSize(p, colW - 12);
+                            h += lines.length * lineH;
                         });
-                    };
-
-                    renderColumn(leftPoints, margin);
-                    renderColumn(rightPoints, margin + columnWidth + columnGap);
-                    y = startY + blockHeight;
-                } else {
-                    points.forEach(point => {
-                        const bulletText = String(point || '').trim();
-                        if (!bulletText) return;
-
-                        const wrapped = doc.splitTextToSize(bulletText, contentWidth - 16);
-                        ensurePageSpace((wrapped.length * 14) + 4);
-
-                        doc.setFont('times', 'normal');
-                        doc.setFontSize(11);
-                        doc.setTextColor('#111111');
-                        doc.text('•', margin + 2, y);
-                        doc.text(wrapped, margin + 14, y);
-                        y += wrapped.length * 14;
+                        maxH = Math.max(maxH, h);
                     });
+                    if (y + maxH > pageHeight - margin) addPage();
+                    const startY = y;
+                    cols.forEach((col, ci) => {
+                        let cy = startY;
+                        const cx = ci === 0 ? margin : margin + colW + 12;
+                        col.forEach(p => {
+                            p = String(p || '').trim();
+                            if (!p) return;
+                            const lines = doc.splitTextToSize(p, colW - 12);
+                            doc.setFont('helvetica', 'normal');
+                            doc.setFontSize(9);
+                            doc.setTextColor('#374151');
+                            doc.text('•', cx, cy);
+                            doc.text(lines, cx + 10, cy);
+                            cy += lines.length * lineH;
+                        });
+                    });
+                    y = startY + maxH;
+                } else {
+                    points.forEach(p => writeBullet(p, margin, contentWidth, 9));
                 }
-
-                y += 5;
             });
         });
 
@@ -1974,10 +1981,12 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
 
     initializeChatbot() {
         const chatbot = document.getElementById('chatbot');
+        if (!chatbot) return;
         const chatIcon = document.getElementById('chat-icon');
         const chatWindow = document.getElementById('chat-window');
         const chatForm = document.getElementById('chat-form');
         const chatInput = document.getElementById('chat-input');
+        if (!chatIcon || !chatWindow || !chatForm || !chatInput) return;
         
         // Show chatbot after analysis
         chatbot.classList.remove('hidden');
@@ -1989,12 +1998,19 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
         this.setStatus('Resume assistant is ready. Ask follow-up questions anytime.', 'success');
 
         // Toggle chat window
-        chatIcon.addEventListener('click', () => {
+        const toggleChat = () => {
             chatWindow.classList.toggle('hidden');
             if (!chatWindow.classList.contains('hidden')) {
                 chatInput.focus();
             }
-        });
+        };
+        chatIcon.addEventListener('click', toggleChat);
+
+        // Minimize button
+        const minimizeBtn = chatWindow.querySelector('[data-minimize]');
+        if (minimizeBtn) {
+            minimizeBtn.addEventListener('click', toggleChat);
+        }
 
         // Handle chat form submission
         chatForm.addEventListener('submit', (e) => {
