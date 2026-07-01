@@ -1,0 +1,14 @@
+Position: Senior Product Designer
+Company: Acme Tech SaaS
+Location: San Francisco, CA / Remote
+
+About the Role:
+We are looking for a Senior Product Designer to join our team. You will lead design initiatives, collaborate with engineering, and establish design systems that scale across multiple product areas.
+
+Requirements:
+- 5+ years of experience in product design, UX, or UI design roles.
+- Expert-level proficiency with Figma.
+- Experience building and maintaining Design Systems and using Design Tokens.
+- Strong user research and prototyping skills.
+- Understanding of web accessibility standards (WCAG) and basic HTML/CSS.
+- Strong product strategy and stakeholder management communication skills.

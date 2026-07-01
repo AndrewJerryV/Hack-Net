@@ -1,0 +1,38 @@
+Alex Morgan
+Senior Product Designer
+alex.morgan@email.com | +1 (555) 010-3344 | San Francisco, CA | alexmorgan.design | linkedin.com/in/alexmorgan | github.com/alexmorgan
+
+SUMMARY
+Product designer with 8+ years building user-centric interfaces at fast-growing SaaS companies. Led design systems adoption across 4 product teams and shipped features used by 2M+ monthly active users.
+
+EXPERIENCE
+Senior Product Designer | Stripe
+Remote | Jun 2022 – Present
+* Led the end-to-end redesign of the Dashboard, increasing daily active users by 28% within two quarters.
+* Built and shipped a unified design system used by 40+ engineers across 6 product squads.
+* Mentored 4 mid-level designers; introduced weekly design critique rituals adopted org-wide.
+
+Product Designer | Notion
+San Francisco, CA | Aug 2019 – May 2022
+* Designed the AI Writer feature from 0 to 1; reached 1M weekly users in 3 months.
+* Reduced onboarding drop-off by 41% by simplifying the workspace setup flow.
+* Partnered with research to run 30+ usability studies across enterprise segments.
+
+EDUCATION
+Rhode Island School of Design
+BFA, Graphic Design | Providence, RI | 2014 – 2018
+Cum Laude · Senior Design Award
+
+SKILLS
+Figma, Design Systems, Prototyping, Design Tokens, User Research, UI/UX, Accessibility, HTML/CSS, Motion Design, Strategy
+
+PROJECTS
+Open-source Icon Library | github.com/alexmorgan/icons
+* 350+ MIT-licensed icons used by 10k+ developers worldwide.
+
+CERTIFICATIONS
+Google UX Certificate — 2023
+NNG UX Foundations — 2022
+
+LANGUAGES
+English (Native), Spanish (Conversational), French (Basic)
