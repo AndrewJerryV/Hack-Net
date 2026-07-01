@@ -1067,19 +1067,9 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
             exportPdfBtn.addEventListener('click', () => this.exportAnalysisToPDF());
         }
 
-        const exportWordBtn = document.getElementById('export-word-btn');
-        if (exportWordBtn) {
-            exportWordBtn.addEventListener('click', () => this.exportAnalysisToWord());
-        }
-
         const exportEnhancedPdfBtn = document.getElementById('export-enhanced-pdf-btn');
         if (exportEnhancedPdfBtn) {
             exportEnhancedPdfBtn.addEventListener('click', () => this.exportEnhancedResumeToPDF());
-        }
-
-        const exportEnhancedWordBtn = document.getElementById('export-enhanced-word-btn');
-        if (exportEnhancedWordBtn) {
-            exportEnhancedWordBtn.addEventListener('click', () => this.exportEnhancedResumeToWord());
         }
 
         // Modal close button
@@ -1582,402 +1572,59 @@ Experience with performance tuning, analytics dashboards, and cross-functional c
         doc.save('resume-analysis-report.pdf');
     }
 
-    exportAnalysisToWord() {
-        if (!this.analysis) return;
 
-        // Get docx from window object since we're using CDN
-        const { Document, Packer, Paragraph, TextRun, HeadingLevel } = window.docx;
-
-        const createSection = (title, items, isList = true) => {
-            const children = [
-                new Paragraph({
-                    text: title,
-                    heading: HeadingLevel.HEADING_2,
-                    spacing: { before: 400, after: 200 },
-                })
-            ];
-
-            if (isList) {
-                items.forEach(item => {
-                    children.push(
-                        new Paragraph({
-                            children: [
-                                new TextRun("• "),
-                                new TextRun(item)
-                            ],
-                            spacing: { before: 100, after: 100 }
-                        })
-                    );
-                });
-            } else {
-                children.push(
-                    new Paragraph({
-                        text: items.join(', '),
-                        spacing: { before: 100, after: 100 }
-                    })
-                );
-            }
-            return children;
-        };
-
-        const doc = new Document({
-            sections: [{
-                properties: {},
-                children: [
-                    new Paragraph({
-                        text: "Resume Analysis Report",
-                        heading: HeadingLevel.TITLE,
-                        spacing: { before: 200, after: 200 }
-                    }),
-                    new Paragraph({
-                        text: `ATS Score: ${this.analysis.atsScore}%`,
-                        heading: HeadingLevel.HEADING_1,
-                        spacing: { before: 200, after: 200 }
-                    }),
-                    ...createSection("Matched Keywords", this.analysis.matchedKeywords, false),
-                    ...createSection("Missing Keywords", this.analysis.missingKeywords, false),
-                    ...createSection("Skill Gaps", this.analysis.skillGaps),
-                    ...createSection("Improvement Suggestions", this.analysis.suggestions)
-                ]
-            }]
-        });
-
-        // Generate and save document
-        Packer.toBlob(doc).then(blob => {
-            window.saveAs(blob, "resume-analysis-report.docx");
-        });
-    }
 
     exportEnhancedResumeToPDF() {
         if (!this.analysis || !this.analysis.enhancedResume) return;
-        const { jsPDF } = window.jspdf;
-        const resume = this.analysis.enhancedResume;
-        const doc = new jsPDF('p', 'pt', 'a4');
-        const margin = 50;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const contentWidth = pageWidth - margin * 2;
-        let y = 48;
 
-        const addPage = () => { doc.addPage(); y = 48; };
-        const spaceLeft = () => pageHeight - margin - y;
-
-        const write = (text, x, width, size, style, color) => {
-            doc.setFont('helvetica', style);
-            doc.setFontSize(size);
-            doc.setTextColor(color);
-            const lines = doc.splitTextToSize(String(text || '').trim(), width);
-            if (y + lines.length * (size * 1.35) > pageHeight - margin) addPage();
-            doc.text(lines, x, y);
-            y += lines.length * (size * 1.35);
-        };
-
-        const writeBullet = (text, x, width, size) => {
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(size);
-            doc.setTextColor('#374151');
-            const indent = 12;
-            const bulletWidth = width - indent;
-            const lines = doc.splitTextToSize(String(text || '').trim(), bulletWidth);
-            const lineH = size * 1.35;
-            if (y + lines.length * lineH > pageHeight - margin) addPage();
-            doc.text('•', x, y);
-            doc.text(lines, x + indent, y);
-            y += lines.length * lineH;
-        };
-
-        // Name
-        write(resume.name || 'Candidate Name', margin, contentWidth, 18, 'bold', '#1f2937');
-        y += 4;
-
-        // Contact — two columns like HTML display
-        const contactCols = this.getContactColumns(resume.contact || []);
-        if (contactCols.left.length || contactCols.right.length) {
-            const halfW = contentWidth / 2 - 6;
-            const both = [contactCols.left, contactCols.right];
-            const maxLines = Math.max(contactCols.left.length, contactCols.right.length);
-            const lineH = 10 * 1.3;
-            const blockH = maxLines * lineH;
-            if (y + blockH > pageHeight - margin) addPage();
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9);
-            doc.setTextColor('#4b5563');
-            contactCols.left.forEach((line, i) => doc.text(line, margin, y + i * lineH));
-            contactCols.right.forEach((line, i) => doc.text(line, pageWidth - margin, y + i * lineH, { align: 'right' }));
-            y += blockH + 6;
+        const content = document.getElementById('enhanced-resume-content');
+        if (!content || !content.innerHTML.trim() || content.innerHTML.includes('Could not generate')) {
+            alert('Nothing to export — please run the analysis first.');
+            return;
         }
 
-        // Horizontal rule
-        if (y + 4 > pageHeight - margin) addPage();
-        doc.setDrawColor('#d1d5db');
-        doc.setLineWidth(0.5);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 10;
+        const styleText = Array.from(document.querySelectorAll('style')).map(s => s.textContent).join('\n');
 
-        // Summary
-        if (resume.summary) {
-            write(resume.summary, margin, contentWidth, 10, 'normal', '#374151');
-            y += 4;
-        }
+        // Create a hidden iframe for print preview
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
 
-        // Sections
-        const sections = Array.isArray(resume.sections) ? resume.sections : [];
-        sections.forEach(section => {
-            const displayTitle = this.getDisplaySectionTitle(section.title || '');
-            if (y + 30 > pageHeight - margin) addPage();
-            y += 6;
+        const doc = iframe.contentWindow.document;
+        doc.write([
+            '<html><head><title>',
+            this.escapeHtml(this.analysis.enhancedResume.name || 'Enhanced Resume'),
+            ' — Enhanced Resume</title>',
+            '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Lora:wght@500;600;700&family=Source+Serif+4:wght@500;600;700&display=swap" rel="stylesheet">',
+            '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />',
+            '<style>', styleText, '<\/style>',
+            '<style>',
+            '@page { size: A4; margin: 0; }',
+            'body { margin: 0; background: white; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: flex; justify-content: center; }',
+            '.enhanced-resume-paper { box-shadow: none !important; border-radius: 0 !important; margin: 0 !important; }',
+            '<\/style>',
+            '<\/head><body>',
+            content.innerHTML,
+            '<\/body><\/html>'
+        ].join(''));
 
-            // Section title
-            write(displayTitle, margin, contentWidth, 11, 'bold', '#1f2937');
+        doc.close();
 
-            // Underline
-            doc.setDrawColor('#9ca3af');
-            doc.setLineWidth(0.4);
-            doc.line(margin, y + 1, pageWidth - margin, y + 1);
-            y += 6;
-
-            const items = Array.isArray(section.items) ? section.items : [];
-            items.forEach(item => {
-                // Header row (left + right aligned)
-                if (item.header) {
-                    const row = this.splitHeaderRow(item.header);
-                    const left = String(row.left || item.header || '').trim();
-                    const right = String(row.right || '').trim();
-                    if (left || right) {
-                        doc.setFont('helvetica', 'bold');
-                        doc.setFontSize(10);
-                        doc.setTextColor('#1f2937');
-                        const rightW = right ? Math.min(160, doc.getTextWidth(right) + 4) : 0;
-                        const leftW = contentWidth - rightW - (right ? 8 : 0);
-                        const leftLines = left ? doc.splitTextToSize(left, leftW) : [];
-                        const rightLines = right ? doc.splitTextToSize(right, rightW) : [];
-                        const rows = Math.max(leftLines.length, rightLines.length || 1);
-                        const lineH = 10 * 1.35;
-                        if (y + rows * lineH > pageHeight - margin) addPage();
-                        if (leftLines.length) doc.text(leftLines, margin, y);
-                        if (rightLines.length) doc.text(rightLines, pageWidth - margin, y, { align: 'right' });
-                        y += rows * lineH;
-                    }
-                }
-
-                // Subheader
-                if (item.subheader) {
-                    const subRow = this.splitHeaderRow(item.subheader);
-                    const subLeft = String(subRow.left || item.subheader || '').trim();
-                    const subRight = String(subRow.right || '').trim();
-                    if (subLeft || subRight) {
-                        doc.setFont('helvetica', 'italic');
-                        doc.setFontSize(9);
-                        doc.setTextColor('#4b5563');
-                        const rightW = subRight ? Math.min(160, doc.getTextWidth(subRight) + 4) : 0;
-                        const leftW = contentWidth - rightW - (subRight ? 8 : 0);
-                        const leftLines = subLeft ? doc.splitTextToSize(subLeft, leftW) : [];
-                        const rightLines = subRight ? doc.splitTextToSize(subRight, rightW) : [];
-                        const rows = Math.max(leftLines.length, rightLines.length || 1);
-                        const lineH = 9 * 1.35;
-                        if (y + rows * lineH > pageHeight - margin) addPage();
-                        if (leftLines.length) doc.text(leftLines, margin, y);
-                        if (rightLines.length) doc.text(rightLines, pageWidth - margin, y, { align: 'right' });
-                        y += rows * lineH;
-                    }
-                }
-
-                // Bullet points
-                const points = Array.isArray(item.points) ? item.points.filter(Boolean) : [];
-                const isSkills = /skills/i.test(displayTitle);
-                if (isSkills && points.length >= 8) {
-                    const mid = Math.ceil(points.length / 2);
-                    const cols = [points.slice(0, mid), points.slice(mid)];
-                    const colW = (contentWidth - 12) / 2;
-                    const lineH = 9 * 1.3;
-                    let maxH = 0;
-                    cols.forEach(col => {
-                        let h = 0;
-                        col.forEach(p => {
-                            p = String(p || '').trim();
-                            if (!p) return;
-                            const lines = doc.splitTextToSize(p, colW - 12);
-                            h += lines.length * lineH;
-                        });
-                        maxH = Math.max(maxH, h);
-                    });
-                    if (y + maxH > pageHeight - margin) addPage();
-                    const startY = y;
-                    cols.forEach((col, ci) => {
-                        let cy = startY;
-                        const cx = ci === 0 ? margin : margin + colW + 12;
-                        col.forEach(p => {
-                            p = String(p || '').trim();
-                            if (!p) return;
-                            const lines = doc.splitTextToSize(p, colW - 12);
-                            doc.setFont('helvetica', 'normal');
-                            doc.setFontSize(9);
-                            doc.setTextColor('#374151');
-                            doc.text('•', cx, cy);
-                            doc.text(lines, cx + 10, cy);
-                            cy += lines.length * lineH;
-                        });
-                    });
-                    y = startY + maxH;
-                } else {
-                    points.forEach(p => writeBullet(p, margin, contentWidth, 9));
-                }
-            });
-        });
-
-        doc.save('enhanced-resume.pdf');
-    }
-
-    exportEnhancedResumeToWord() {
-        if (!this.analysis?.enhancedResume) return;
-
-        // Get docx from window object since we're using CDN
-        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, TabStopType, BorderStyle } = window.docx;
-        const resume = this.analysis.enhancedResume;
-        const rightTabType = (TabStopType && TabStopType.RIGHT) ? TabStopType.RIGHT : 'right';
-
-        const safeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-        const children = [
-            // Name
-            new Paragraph({
-                text: safeText(resume.name),
-                heading: HeadingLevel.TITLE,
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 120 }
-            }),
-
-            // Contact Info
-            new Paragraph({
-                text: safeText((resume.contact || []).join(' | ')),
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 160 }
-            }),
-
-            // Summary
-            new Paragraph({
-                text: safeText(resume.summary),
-                spacing: { before: 80, after: 180 }
-            })
-        ];
-
-        // Sections
-        (resume.sections || []).forEach(section => {
-            const displayTitle = this.getDisplaySectionTitle(safeText(section.title));
-            // Section Title
-            children.push(
-                new Paragraph({
-                    text: displayTitle,
-                    heading: HeadingLevel.HEADING_1,
-                    spacing: { before: 220, after: 90 },
-                    border: {
-                        bottom: {
-                            color: '222222',
-                            space: 1,
-                            value: (BorderStyle && BorderStyle.SINGLE) ? BorderStyle.SINGLE : 'single',
-                            size: 6
-                        }
-                    }
-                })
-            );
-
-            // Section Items
-            (section.items || []).forEach(item => {
-                const headerRow = this.splitHeaderRow(item.header);
-                children.push(
-                    new Paragraph({
-                        children: headerRow.right
-                            ? [
-                                new TextRun({ text: safeText(headerRow.left), bold: true }),
-                                new TextRun({ text: '\t' }),
-                                new TextRun({ text: safeText(headerRow.right), bold: true })
-                            ]
-                            : [new TextRun({ text: safeText(headerRow.left), bold: true })],
-                        spacing: { before: 90, after: 55 },
-                        tabStops: headerRow.right
-                            ? [{ type: rightTabType, position: 10300 }]
-                            : []
-                    })
-                );
-
-                if (item.subheader) {
-                    const subRow = this.splitHeaderRow(item.subheader);
-                    children.push(
-                        new Paragraph({
-                            children: subRow.right
-                                ? [
-                                    new TextRun({ text: safeText(subRow.left), italics: true }),
-                                    new TextRun({ text: '\t' }),
-                                    new TextRun({ text: safeText(subRow.right), italics: true })
-                                ]
-                                : [new TextRun({ text: safeText(subRow.left), italics: true })],
-                            spacing: { before: 20, after: 90 },
-                            tabStops: subRow.right
-                                ? [{ type: rightTabType, position: 10300 }]
-                                : []
-                        })
-                    );
-                }
-
-                // Bullet Points
-                const points = (item.points || []).map(point => safeText(point)).filter(Boolean);
-                const useTwoColumnSkills = /skills/i.test(displayTitle) && points.length >= 8;
-
-                if (useTwoColumnSkills) {
-                    const middle = Math.ceil(points.length / 2);
-                    const leftPoints = points.slice(0, middle);
-                    const rightPoints = points.slice(middle);
-
-                    for (let i = 0; i < leftPoints.length; i++) {
-                        const left = leftPoints[i] || '';
-                        const right = rightPoints[i] || '';
-                        children.push(
-                            new Paragraph({
-                                children: [
-                                    new TextRun({ text: left ? `• ${left}` : '' }),
-                                    new TextRun({ text: '\t' }),
-                                    new TextRun({ text: right ? `• ${right}` : '' })
-                                ],
-                                spacing: { before: 20, after: 55 },
-                                tabStops: [{ type: rightTabType, position: 5600 }]
-                            })
-                        );
-                    }
-                } else {
-                    points.forEach(point => {
-                        children.push(
-                            new Paragraph({
-                                text: safeText(point),
-                                bullet: { level: 0 },
-                                spacing: { before: 20, after: 55 },
-                                indent: { left: 360, hanging: 180 }
-                            })
-                        );
-                    });
-                }
-            });
-        });
-
-        const doc = new Document({
-            sections: [{
-                properties: {
-                    page: {
-                        margin: {
-                            top: 900,
-                            right: 900,
-                            bottom: 900,
-                            left: 900
-                        }
-                    }
-                },
-                children
-            }]
-        });
-
-        // Generate and save document
-        Packer.toBlob(doc).then(blob => {
-            window.saveAs(blob, "enhanced-resume.docx");
+        iframe.contentWindow.focus();
+        iframe.contentWindow.document.fonts.ready.then(() => {
+            setTimeout(() => {
+                iframe.contentWindow.print();
+                setTimeout(() => iframe.remove(), 1000);
+            }, 300);
         });
     }
+
+
 
     initializeChatbot() {
         const chatbot = document.getElementById('chatbot');
